@@ -59,6 +59,12 @@ export interface DefaultResumeIndexItem {
   fingerprint: string;
 }
 
+export interface DefaultResumeDetailItem {
+  id: string;
+  title: string;
+  content: string;
+}
+
 function sortById<T extends { id?: string }>(items: T[] | undefined): T[] | undefined {
   return items
     ? [...items].sort((left, right) =>
@@ -184,9 +190,12 @@ function serializeJobIndexItem(job: JobIndexRecord): JobIndexItem {
   };
 }
 
-export async function getDefaultResumeIndexItem(
-  userId: string,
-): Promise<DefaultResumeIndexItem | null> {
+async function getDefaultResumeSnapshot(userId: string): Promise<{
+  id: string;
+  title: string;
+  content: string;
+  fingerprint: string;
+} | null> {
   const resume = await getDefaultResumeForUser(userId);
   if (!resume?.id) return null;
 
@@ -197,11 +206,35 @@ export async function getDefaultResumeIndexItem(
 
   return {
     id: resume.id,
+    title: resume.title,
+    content: normalizedContent,
     fingerprint: createDefaultResumeFingerprint({
       id: resume.id,
       title: resume.title,
       normalizedContent,
     }),
+  };
+}
+
+export async function getDefaultResumeIndexItem(
+  userId: string,
+): Promise<DefaultResumeIndexItem | null> {
+  const snapshot = await getDefaultResumeSnapshot(userId);
+  if (!snapshot) return null;
+
+  return { id: snapshot.id, fingerprint: snapshot.fingerprint };
+}
+
+export async function getDefaultResumeDetailItem(
+  userId: string,
+): Promise<DefaultResumeDetailItem | null> {
+  const snapshot = await getDefaultResumeSnapshot(userId);
+  if (!snapshot) return null;
+
+  return {
+    id: snapshot.id,
+    title: snapshot.title,
+    content: snapshot.content,
   };
 }
 
