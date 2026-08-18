@@ -84,7 +84,7 @@ function CompaniesTable({
             <TableHead className="hidden sm:table-cell">Value</TableHead>
             <TableHead>Total Jobs</TableHead>
             <TableHead>Jobs Applied</TableHead>
-            <TableHead>Rejected by employer</TableHead>
+            <TableHead>Rejected</TableHead>
             <TableHead>Actions</TableHead>
             <TableHead>
               <span className="sr-only">Actions</span>
