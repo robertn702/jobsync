@@ -98,6 +98,14 @@ describe("createJobFromNames", () => {
     expect(call.appliedDate).toBe(appliedDate);
   });
 
+  it("marks employer rejections as applied", async () => {
+    await createJobFromNames({ ...baseInput, status: "Rejected" }, userId);
+
+    expect(createJobRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ applied: true, appliedDate: null }),
+    );
+  });
+
   it("appends dropped tags to the success message", async () => {
     (resolveTags as any).mockResolvedValue({
       resolved: [{ id: "tag-1", label: "React", created: false }],

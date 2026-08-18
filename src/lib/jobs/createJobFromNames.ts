@@ -72,6 +72,7 @@ export async function createJobFromNames(
     allowDuplicate = false,
     createdVia,
   } = input;
+  const resolvedApplied = applied || status?.toLowerCase() === "rejected";
 
   // Validate synchronously before starting any async resolution work, so an
   // invalid jobType/workplaceType can't orphan already-started promises.
@@ -143,7 +144,7 @@ export async function createJobFromNames(
     workplaceType: workplaceTypeValue,
     userId,
     jobUrl: jobUrl ? normalizeJobUrl(jobUrl) : null,
-    applied,
+    applied: resolvedApplied,
     tagIds: resolvedTagsResult.resolved.map((t) => t.id),
     createdVia: createdVia ?? null,
     descriptionCompleteness,

@@ -110,6 +110,9 @@ export async function updateJobFromNames(
     ...(resolvedSource ? [resolvedSource] : []),
     ...(resolvedTagsResult ? resolvedTagsResult.resolved : []),
   ];
+  const resolvedApplied = input.status?.toLowerCase() === "rejected"
+    ? true
+    : input.applied;
 
   const data: Record<string, unknown> = {};
   if (resolvedCompany) data.companyId = resolvedCompany.id;
@@ -122,7 +125,7 @@ export async function updateJobFromNames(
   if (input.salaryRange !== undefined) data.salaryRange = input.salaryRange;
   if (input.dueDate !== undefined) data.dueDate = input.dueDate;
   if (input.jobUrl !== undefined) data.jobUrl = normalizeJobUrl(input.jobUrl);
-  if (input.applied !== undefined) data.applied = input.applied;
+  if (resolvedApplied !== undefined) data.applied = resolvedApplied;
   if (input.appliedDate !== undefined) data.appliedDate = input.appliedDate;
   if (input.applied === true && input.appliedDate === undefined) {
     data.appliedDate = new Date();

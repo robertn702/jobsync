@@ -46,4 +46,17 @@ describe("McpAddJobInputShape.status", () => {
       );
     }
   });
+
+  it("documents that rejected status enforces the applied invariant", () => {
+    for (const field of [
+      McpAddJobInputShape.status,
+      McpAddJobInputShape.applied,
+      McpUpdateJobInputShape.status,
+      McpUpdateJobInputShape.applied,
+    ]) {
+      expect((field as any).description).toContain(
+        "automatically sets applied to true",
+      );
+    }
+  });
 });

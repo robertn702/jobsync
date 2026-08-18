@@ -22,6 +22,7 @@ vi.mock("@prisma/client", () => {
   const mPrismaClient = {
     jobStatus: {
       findMany: vi.fn(),
+      findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
     },
@@ -979,6 +980,17 @@ describe("jobActions", () => {
       });
       expect(result).toEqual({ data: jobData, success: true });
     });
+    it("should mark a rejected job as applied", async () => {
+      (getCurrentUser as any).mockResolvedValue(mockUser);
+      (prisma.jobStatus.findUnique as any).mockResolvedValue({ value: "rejected" });
+      (prisma.job.create as any).mockResolvedValue(jobData);
+
+      await addJob({ ...jobData, applied: false });
+
+      expect(prisma.job.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ applied: true }),
+      });
+    });
     it("should handle unexpected errors", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
 
@@ -1009,6 +1021,18 @@ describe("jobActions", () => {
 
       expect(result).toStrictEqual({ data: jobData, success: true });
       expect(prisma.job.update).toHaveBeenCalledTimes(1);
+    });
+    it("should mark a rejected job as applied", async () => {
+      (getCurrentUser as any).mockResolvedValue(mockUser);
+      (prisma.jobStatus.findUnique as any).mockResolvedValue({ value: "rejected" });
+      (prisma.job.update as any).mockResolvedValue(jobData);
+
+      await updateJob({ ...jobData, applied: false });
+
+      expect(prisma.job.update).toHaveBeenCalledWith({
+        where: { id: jobData.id, userId: mockUser.id },
+        data: expect.objectContaining({ applied: true }),
+      });
     });
     it("should handle unexpected errors", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
@@ -1082,6 +1106,21 @@ describe("jobActions", () => {
           applied: true,
           appliedDate: expect.any(Date),
         },
+      });
+    });
+    it("should mark a rejected status as applied", async () => {
+      (getCurrentUser as any).mockResolvedValue(mockUser);
+      (prisma.job.update as any).mockResolvedValue(jobData);
+
+      await updateJobStatus(jobData.id, {
+        id: "rejected-id",
+        label: "Rejected",
+        value: "rejected",
+      });
+
+      expect(prisma.job.update).toHaveBeenCalledWith({
+        where: { id: jobData.id, userId: mockUser.id },
+        data: { statusId: "rejected-id", applied: true },
       });
     });
     it("should handle unexpected errors", async () => {

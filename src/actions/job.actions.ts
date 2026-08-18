@@ -326,6 +326,15 @@ export const createJobSource = async (
 
 import { createJobRecord } from "@/lib/jobs/createJobRecord";
 
+async function appliedForStatus(statusId: string, applied: boolean): Promise<boolean> {
+  if (applied) return true;
+  const status = await prisma.jobStatus.findUnique({
+    where: { id: statusId },
+    select: { value: true },
+  });
+  return status?.value === "rejected";
+}
+
 export const addJob = async (
   data: z.infer<typeof AddJobFormSchema>,
 ): Promise<any | undefined> => {
@@ -354,6 +363,7 @@ export const addJob = async (
       coverLetter,
       tags,
     } = data;
+    const resolvedApplied = await appliedForStatus(status, applied);
 
     const job = await createJobRecord({
       jobTitleId: title,
@@ -369,7 +379,7 @@ export const addJob = async (
       workplaceType,
       userId: user.id,
       jobUrl,
-      applied,
+      applied: resolvedApplied,
       resumeId: resume,
       coverLetterId: coverLetter,
       tagIds: tags ?? [],
@@ -416,6 +426,7 @@ export const updateJob = async (
     } = data;
 
     const tagIds = tags ?? [];
+    const resolvedApplied = await appliedForStatus(status, applied);
 
     const job = await prisma.job.update({
       where: {
@@ -436,7 +447,7 @@ export const updateJob = async (
         jobType: type,
         workplaceType,
         jobUrl,
-        applied,
+        applied: resolvedApplied,
         resumeId: resume,
         coverLetterId: coverLetter,
         tags: { set: tagIds.map((id) => ({ id })) },
@@ -469,6 +480,7 @@ export const updateJobStatus = async (
             appliedDate: new Date(),
           };
         case "interview":
+        case "rejected":
           return {
             statusId: status.id,
             applied: true,

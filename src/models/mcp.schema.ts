@@ -3,7 +3,7 @@ import { APP_CONSTANTS, JOB_STATUS_VALUES } from "@/lib/constants";
 import { WORKPLACE_TYPES, matchEnumEntry } from "@/models/job.model";
 
 const JOB_STATUS_DESCRIPTION =
-  "Rejected means the employer rejected your application after you applied. Archived means you are not pursuing the job, withdrew, or the posting closed.";
+  "Rejected means the employer rejected your application after you applied and automatically sets applied to true. Archived means you are not pursuing the job, withdrew, or the posting closed.";
 
 // An enum rather than a described string, for the same reason status is one:
 // a small local model fills an enum-constrained slot and ignores prose hints.
@@ -49,7 +49,7 @@ export const McpAddJobInputShape = {
       `Application status. One of: ${JOB_STATUS_VALUES.join(", ")}. Defaults to '${APP_CONSTANTS.MCP_DEFAULT_STATUS}'. ${JOB_STATUS_DESCRIPTION}`,
     ),
   dueDate: z.string().datetime({ offset: true }).optional().describe("Application deadline as an ISO-8601 datetime string"),
-  applied: z.boolean().optional().describe("Set true if you have already submitted the application"),
+  applied: z.boolean().optional().describe("Set true if you have already submitted the application. Rejected status automatically sets applied to true."),
   appliedDate: z.string().datetime({ offset: true }).optional().describe("Date the application was submitted as an ISO-8601 datetime string"),
   jobUrl: z.string().url().optional().describe("Direct URL to the job posting"),
   salaryRange: z.string().optional().describe("Salary range as a free-form string, e.g. '$120k–$150k' or '100,000 CAD'"),
@@ -186,7 +186,7 @@ export const McpUpdateJobInputShape = {
       `Application status. One of: ${JOB_STATUS_VALUES.join(", ")}. ${JOB_STATUS_DESCRIPTION}`,
     ),
   dueDate: z.string().datetime({ offset: true }).optional(),
-  applied: z.boolean().optional(),
+  applied: z.boolean().optional().describe("Set true if you have already submitted the application. Rejected status automatically sets applied to true."),
   appliedDate: z.string().datetime({ offset: true }).optional(),
   jobUrl: z.string().url().optional(),
   salaryRange: z.string().optional(),
