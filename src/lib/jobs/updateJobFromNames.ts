@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { APP_CONSTANTS } from "@/lib/constants";
 import { normalizeJobUrl } from "@/lib/scraper/utils";
 import { classifyDescriptionCompleteness } from "@/lib/jobs/descriptionCompleteness";
+import { extractSalaryRange } from "@/lib/jobs/extractSalaryRange";
 import type { DescriptionCompleteness } from "@/models/job.model";
 import {
   resolveCompany,
@@ -63,7 +64,7 @@ export async function updateJobFromNames(
   // caller learns "not found" before any entity is created as a side effect.
   const existing = await prisma.job.findFirst({
     where: { id: jobId, userId, createdVia: { not: null } },
-    select: { id: true, descriptionCompleteness: true },
+    select: { id: true, descriptionCompleteness: true, salaryRange: true },
   });
   if (!existing) {
     return {
@@ -138,6 +139,10 @@ export async function updateJobFromNames(
     descriptionCompleteness = classifyDescriptionCompleteness(input.jobDescription);
     data.description = md.render(input.jobDescription);
     data.descriptionCompleteness = descriptionCompleteness;
+    if (input.salaryRange === undefined && !existing.salaryRange) {
+      const extractedSalaryRange = extractSalaryRange(input.jobDescription);
+      if (extractedSalaryRange) data.salaryRange = extractedSalaryRange;
+    }
   }
 
   if (Object.keys(data).length === 0) {

@@ -79,6 +79,55 @@ describe("createJobFromNames", () => {
     );
   });
 
+  it("extracts salaryRange from the job description when omitted", async () => {
+    await createJobFromNames(
+      { ...baseInput, jobDescription: "Salary: $120k-$150k plus benefits." },
+      userId,
+    );
+
+    expect(createJobRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ salaryRange: "$120k-$150k" }),
+    );
+  });
+
+  it("keeps an explicitly supplied salaryRange", async () => {
+    await createJobFromNames(
+      {
+        ...baseInput,
+        jobDescription: "Salary: $120k-$150k plus benefits.",
+        salaryRange: "$160k-$180k",
+      },
+      userId,
+    );
+
+    expect(createJobRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ salaryRange: "$160k-$180k" }),
+    );
+  });
+
+  it("does not infer salaryRange when the caller explicitly supplies an empty value", async () => {
+    await createJobFromNames(
+      {
+        ...baseInput,
+        jobDescription: "Salary: $120k-$150k plus benefits.",
+        salaryRange: "",
+      },
+      userId,
+    );
+
+    expect(createJobRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ salaryRange: "" }),
+    );
+  });
+
+  it("leaves salaryRange empty when the description has no explicit range", async () => {
+    await createJobFromNames(baseInput, userId);
+
+    expect(createJobRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ salaryRange: null }),
+    );
+  });
+
   it("defaults appliedDate to now when applied is true and no date given", async () => {
     const before = Date.now();
     await createJobFromNames({ ...baseInput, applied: true }, userId);

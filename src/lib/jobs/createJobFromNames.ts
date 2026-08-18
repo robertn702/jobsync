@@ -5,6 +5,7 @@ import { normalizeJobUrl } from "@/lib/scraper/utils";
 import { findExistingJobByUrl } from "@/lib/jobs/jobDedupe";
 import { createJobRecord } from "@/lib/jobs/createJobRecord";
 import { classifyDescriptionCompleteness } from "@/lib/jobs/descriptionCompleteness";
+import { extractSalaryRange } from "@/lib/jobs/extractSalaryRange";
 import type { DescriptionCompleteness } from "@/models/job.model";
 import {
   resolveCompany,
@@ -132,7 +133,7 @@ export async function createJobFromNames(
     locationId: resolvedLocation?.id ?? null,
     statusId,
     jobSourceId: resolvedSource?.id ?? null,
-    salaryRange: salaryRange ?? null,
+    salaryRange: salaryRange ?? extractSalaryRange(jobDescription),
     dueDate,
     appliedDate: resolvedAppliedDate,
     // Markdown-rendered here, unlike UI-created jobs which store raw

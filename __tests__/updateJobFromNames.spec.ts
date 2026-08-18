@@ -40,6 +40,7 @@ describe("updateJobFromNames", () => {
     (prisma.job.findFirst as any).mockResolvedValue({
       id: "job-1",
       descriptionCompleteness: "title-only",
+      salaryRange: null,
     });
     (prisma.job.update as any).mockResolvedValue({ id: "job-1" });
     (resolveCompany as any).mockResolvedValue({ id: "company-1", label: "Acme", created: false });
@@ -67,7 +68,7 @@ describe("updateJobFromNames", () => {
 
     expect(prisma.job.findFirst).toHaveBeenCalledWith({
       where: { id: "job-1", userId, createdVia: { not: null } },
-      select: { id: true, descriptionCompleteness: true },
+      select: { id: true, descriptionCompleteness: true, salaryRange: true },
     });
   });
 
@@ -90,6 +91,56 @@ describe("updateJobFromNames", () => {
     expect(data.descriptionCompleteness).toBe("full");
     expect(result.descriptionChanged).toBe(true);
     expect(result.descriptionCompleteness).toBe("full");
+  });
+
+  it("extracts salaryRange when a description enriches an empty record", async () => {
+    await updateJobFromNames(
+      { jobId: "job-1", jobDescription: "Salary: $120k-$150k plus benefits." },
+      userId,
+    );
+
+    const data = (prisma.job.update as any).mock.calls[0][0].data;
+    expect(data.salaryRange).toBe("$120k-$150k");
+  });
+
+  it("does not overwrite an existing salaryRange from description extraction", async () => {
+    (prisma.job.findFirst as any).mockResolvedValue({
+      id: "job-1",
+      descriptionCompleteness: "title-only",
+      salaryRange: "$160k-$180k",
+    });
+
+    await updateJobFromNames(
+      { jobId: "job-1", jobDescription: "Salary: $120k-$150k plus benefits." },
+      userId,
+    );
+
+    const data = (prisma.job.update as any).mock.calls[0][0].data;
+    expect(data).not.toHaveProperty("salaryRange");
+  });
+
+  it("keeps an explicitly supplied salaryRange when the description also has one", async () => {
+    await updateJobFromNames(
+      {
+        jobId: "job-1",
+        jobDescription: "Salary: $120k-$150k plus benefits.",
+        salaryRange: "$160k-$180k",
+      },
+      userId,
+    );
+
+    const data = (prisma.job.update as any).mock.calls[0][0].data;
+    expect(data.salaryRange).toBe("$160k-$180k");
+  });
+
+  it("does not populate salaryRange when an updated description has no range", async () => {
+    await updateJobFromNames(
+      { jobId: "job-1", jobDescription: "Build reliable distributed systems." },
+      userId,
+    );
+
+    const data = (prisma.job.update as any).mock.calls[0][0].data;
+    expect(data).not.toHaveProperty("salaryRange");
   });
 
   it("reports descriptionChanged:false and the stored completeness when description is untouched", async () => {
