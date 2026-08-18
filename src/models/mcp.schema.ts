@@ -2,6 +2,9 @@ import { z } from "zod";
 import { APP_CONSTANTS, JOB_STATUS_VALUES } from "@/lib/constants";
 import { WORKPLACE_TYPES, matchEnumEntry } from "@/models/job.model";
 
+const JOB_STATUS_DESCRIPTION =
+  "Rejected means the employer rejected your application after you applied. Archived means you are not pursuing the job, withdrew, or the posting closed.";
+
 // An enum rather than a described string, for the same reason status is one:
 // a small local model fills an enum-constrained slot and ignores prose hints.
 // It sent "On-site" — the posting's own spelling — and when that was rejected
@@ -43,7 +46,7 @@ export const McpAddJobInputShape = {
     )
     .optional()
     .describe(
-      `Application status. One of: ${JOB_STATUS_VALUES.join(", ")}. Defaults to '${APP_CONSTANTS.MCP_DEFAULT_STATUS}'.`,
+      `Application status. One of: ${JOB_STATUS_VALUES.join(", ")}. Defaults to '${APP_CONSTANTS.MCP_DEFAULT_STATUS}'. ${JOB_STATUS_DESCRIPTION}`,
     ),
   dueDate: z.string().datetime({ offset: true }).optional().describe("Application deadline as an ISO-8601 datetime string"),
   applied: z.boolean().optional().describe("Set true if you have already submitted the application"),
@@ -179,7 +182,9 @@ export const McpUpdateJobInputShape = {
       z.enum(JOB_STATUS_VALUES),
     )
     .optional()
-    .describe(`Application status. One of: ${JOB_STATUS_VALUES.join(", ")}.`),
+    .describe(
+      `Application status. One of: ${JOB_STATUS_VALUES.join(", ")}. ${JOB_STATUS_DESCRIPTION}`,
+    ),
   dueDate: z.string().datetime({ offset: true }).optional(),
   applied: z.boolean().optional(),
   appliedDate: z.string().datetime({ offset: true }).optional(),

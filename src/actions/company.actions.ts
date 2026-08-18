@@ -68,6 +68,7 @@ export const getCompanyList = async (
             by: ["companyId"],
             where: {
               userId: user.id,
+              applied: true,
               Status: { value: "rejected" },
             },
             _count: { id: true },

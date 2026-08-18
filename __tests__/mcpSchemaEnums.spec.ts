@@ -1,4 +1,7 @@
-import { McpAddJobInputShape } from "@/models/mcp.schema";
+import {
+  McpAddJobInputShape,
+  McpUpdateJobInputShape,
+} from "@/models/mcp.schema";
 import { JOB_STATUS_VALUES } from "@/lib/constants";
 
 describe("McpAddJobInputShape.status", () => {
@@ -27,6 +30,20 @@ describe("McpAddJobInputShape.status", () => {
   it("includes every value in the human-readable description", () => {
     for (const v of JOB_STATUS_VALUES) {
       expect((McpAddJobInputShape.status as any).description).toContain(v);
+    }
+  });
+
+  it("distinguishes employer rejection from archiving", () => {
+    for (const field of [
+      McpAddJobInputShape.status,
+      McpUpdateJobInputShape.status,
+    ]) {
+      expect((field as any).description).toContain(
+        "employer rejected your application after you applied",
+      );
+      expect((field as any).description).toContain(
+        "Archived means you are not pursuing the job",
+      );
     }
   });
 });

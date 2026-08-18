@@ -402,6 +402,24 @@ describe("JobsContainer Search Functionality", () => {
   });
 
   describe("Search with Filters", () => {
+    it("offers archived jobs as a visible filter", async () => {
+      (getJobsList as any).mockResolvedValue({
+        success: true,
+        data: mockJobs,
+        total: 2,
+      });
+
+      renderComponent();
+
+      await act(async () => {
+        await user.click(screen.getByRole("combobox"));
+      });
+
+      expect(
+        screen.getByRole("option", { name: "Archived" }),
+      ).toBeInTheDocument();
+    });
+
     it("should combine search with status filter", async () => {
       (getJobsList as any).mockResolvedValue({
         success: true,

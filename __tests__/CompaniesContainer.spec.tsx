@@ -39,6 +39,19 @@ describe("CompaniesContainer Search Functionality", () => {
     vi.useRealTimers();
   });
 
+  it("labels employer rejections explicitly", async () => {
+    (getCompanyList as any).mockResolvedValue({
+      data: mockCompanies,
+      total: 2,
+    });
+
+    render(<CompaniesContainer />);
+
+    expect(
+      await screen.findByRole("columnheader", { name: "Rejected by employer" }),
+    ).toBeInTheDocument();
+  });
+
   describe("Search Input", () => {
     it("should render search input with placeholder", async () => {
       (getCompanyList as any).mockResolvedValue({
