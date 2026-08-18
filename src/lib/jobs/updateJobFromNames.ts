@@ -63,7 +63,11 @@ export async function updateJobFromNames(
   // caller learns "not found" before any entity is created as a side effect.
   const existing = await prisma.job.findFirst({
     where: { id: jobId, userId, createdVia: { not: null } },
-    select: { id: true, descriptionCompleteness: true },
+    select: {
+      id: true,
+      descriptionCompleteness: true,
+      Status: { select: { value: true } },
+    },
   });
   if (!existing) {
     return {
@@ -110,7 +114,8 @@ export async function updateJobFromNames(
     ...(resolvedSource ? [resolvedSource] : []),
     ...(resolvedTagsResult ? resolvedTagsResult.resolved : []),
   ];
-  const resolvedApplied = input.status?.toLowerCase() === "rejected"
+  const effectiveStatus = input.status?.toLowerCase() ?? existing.Status.value;
+  const resolvedApplied = effectiveStatus === "rejected"
     ? true
     : input.applied;
 

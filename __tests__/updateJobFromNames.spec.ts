@@ -40,6 +40,7 @@ describe("updateJobFromNames", () => {
     (prisma.job.findFirst as any).mockResolvedValue({
       id: "job-1",
       descriptionCompleteness: "title-only",
+      Status: { value: "draft" },
     });
     (prisma.job.update as any).mockResolvedValue({ id: "job-1" });
     (resolveCompany as any).mockResolvedValue({ id: "company-1", label: "Acme", created: false });
@@ -67,7 +68,11 @@ describe("updateJobFromNames", () => {
 
     expect(prisma.job.findFirst).toHaveBeenCalledWith({
       where: { id: "job-1", userId, createdVia: { not: null } },
-      select: { id: true, descriptionCompleteness: true },
+      select: {
+        id: true,
+        descriptionCompleteness: true,
+        Status: { select: { value: true } },
+      },
     });
   });
 
@@ -157,6 +162,38 @@ describe("updateJobFromNames", () => {
     const data = (prisma.job.update as any).mock.calls[0][0].data;
     expect(data).toMatchObject({ statusId: "status-1", applied: true });
     expect(data).not.toHaveProperty("appliedDate");
+  });
+
+  it("preserves applied for an existing employer rejection", async () => {
+    (prisma.job.findFirst as any).mockResolvedValue({
+      id: "job-1",
+      descriptionCompleteness: "title-only",
+      Status: { value: "rejected" },
+    });
+
+    await updateJobFromNames(
+      { jobId: "job-1", applied: false },
+      userId,
+    );
+
+    const data = (prisma.job.update as any).mock.calls[0][0].data;
+    expect(data).toEqual({ applied: true });
+  });
+
+  it("does not force applied for an existing archived job", async () => {
+    (prisma.job.findFirst as any).mockResolvedValue({
+      id: "job-1",
+      descriptionCompleteness: "title-only",
+      Status: { value: "archived" },
+    });
+
+    await updateJobFromNames(
+      { jobId: "job-1", applied: false },
+      userId,
+    );
+
+    const data = (prisma.job.update as any).mock.calls[0][0].data;
+    expect(data).toEqual({ applied: false });
   });
 
   it("returns updated:false with a not-found message on P2025", async () => {
