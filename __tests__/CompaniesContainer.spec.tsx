@@ -48,7 +48,7 @@ describe("CompaniesContainer Search Functionality", () => {
     render(<CompaniesContainer />);
 
     expect(
-      await screen.findByRole("columnheader", { name: "Rejected by employer" }),
+      await screen.findByRole("columnheader", { name: "Rejected" }),
     ).toBeInTheDocument();
   });
 
