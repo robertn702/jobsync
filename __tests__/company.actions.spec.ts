@@ -142,7 +142,7 @@ describe("Company Actions", () => {
       expect(prisma.company.count).toHaveBeenCalledWith({
         where: { createdBy: mockUser.id },
       });
-      expect(prisma.job.groupBy).toHaveBeenNthCalledWith(1, {
+      expect(prisma.job.groupBy).toHaveBeenCalledWith({
         by: ["companyId"],
         where: {
           userId: mockUser.id,

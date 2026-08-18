@@ -148,6 +148,17 @@ describe("updateJobFromNames", () => {
     expect(data.appliedDate).toBeInstanceOf(Date);
   });
 
+  it("marks employer rejections as applied", async () => {
+    await updateJobFromNames(
+      { jobId: "job-1", status: "Rejected", applied: false },
+      userId,
+    );
+
+    const data = (prisma.job.update as any).mock.calls[0][0].data;
+    expect(data).toMatchObject({ statusId: "status-1", applied: true });
+    expect(data).not.toHaveProperty("appliedDate");
+  });
+
   it("returns updated:false with a not-found message on P2025", async () => {
     (prisma.job.update as any).mockRejectedValue({ code: "P2025" });
 
