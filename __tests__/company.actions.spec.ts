@@ -142,6 +142,15 @@ describe("Company Actions", () => {
       expect(prisma.company.count).toHaveBeenCalledWith({
         where: { createdBy: mockUser.id },
       });
+      expect(prisma.job.groupBy).toHaveBeenNthCalledWith(1, {
+        by: ["companyId"],
+        where: {
+          userId: mockUser.id,
+          applied: true,
+          Status: { value: "rejected" },
+        },
+        _count: { id: true },
+      });
     });
 
     it("should handle errors", async () => {
