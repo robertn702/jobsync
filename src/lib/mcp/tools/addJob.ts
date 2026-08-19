@@ -4,6 +4,7 @@ import { createJobFromNames } from "@/lib/jobs/createJobFromNames";
 import { updateJobFromNames } from "@/lib/jobs/updateJobFromNames";
 import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
 import { buildMatchOffer, composeOfferMessage } from "@/lib/mcp/tools/matchDirective";
+import { getGreenhouseLocation } from "@/lib/mcp/tools/greenhouseLocation";
 
 export async function handleAddJob(
   input: z.infer<typeof McpAddJobSchema>,
@@ -19,14 +20,18 @@ export async function handleAddJob(
   }
 
   try {
+    const enrichedInput = {
+      ...input,
+      location: (await getGreenhouseLocation(input.jobUrl)) ?? input.location,
+    };
     const result = await createJobFromNames(
-      { ...input, createdVia: tokenName },
+      { ...enrichedInput, createdVia: tokenName },
       userId,
     );
 
     if (!result.created || !result.jobId) {
-      if (input.upsert && result.duplicateOf) {
-        return upsertExisting(result.duplicateOf.id, input, userId);
+      if (enrichedInput.upsert && result.duplicateOf) {
+        return upsertExisting(result.duplicateOf.id, enrichedInput, userId);
       }
       const text =
         result.message +
