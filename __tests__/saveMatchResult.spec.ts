@@ -36,7 +36,7 @@ describe("handleSaveMatchResult", () => {
     });
   });
 
-  it("parses a valid matchText and persists clamped score + shaped matchData", async () => {
+  it("persists a match for a web-created job", async () => {
     const result = await handleSaveMatchResult(
       { jobId: "job-1", matchText: validMatchText },
       "user-1",
@@ -44,7 +44,7 @@ describe("handleSaveMatchResult", () => {
     );
 
     expect(prisma.job.update).toHaveBeenCalledWith({
-      where: { id: "job-1", userId: "user-1", createdVia: { not: null } },
+      where: { id: "job-1", userId: "user-1" },
       data: {
         matchScore: 78,
         matchData: expect.any(String),
@@ -81,7 +81,19 @@ describe("handleSaveMatchResult", () => {
     expect(prisma.job.update).not.toHaveBeenCalled();
   });
 
-  it("returns a not-found/not-eligible message on P2025 (non-owned or non-MCP-created job)", async () => {
+  it("persists a match for an integration-created job", async () => {
+    await handleSaveMatchResult(
+      { jobId: "job-1", matchText: validMatchText },
+      "user-1",
+      "my-token",
+    );
+
+    expect(prisma.job.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "job-1", userId: "user-1" } }),
+    );
+  });
+
+  it("rejects a job owned by another user", async () => {
     (prisma.job.update as any).mockRejectedValue({ code: "P2025" });
 
     const result = await handleSaveMatchResult(
@@ -91,7 +103,7 @@ describe("handleSaveMatchResult", () => {
     );
 
     expect(result.content[0].text).toBe(
-      "Job not found, not owned by this token's user, or not eligible for a match via MCP.",
+      "Job not found or not owned by this token's user.",
     );
   });
 
@@ -155,22 +167,18 @@ describe("handleSaveMatchResult", () => {
     expect(matchData.resumeTitle).toBe("Scored Resume");
   });
 
-  it("falls back to the current default when an echoed resumeId no longer resolves", async () => {
-    // Echoed id doesn't resolve; default lookup then succeeds.
-    (prisma.resume.findFirst as any)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: "resume-1", title: "My Resume" });
+  it("rejects a supplied resumeId that is not owned by the current user", async () => {
+    (prisma.resume.findFirst as any).mockResolvedValue(null);
 
-    await handleSaveMatchResult(
-      { jobId: "job-1", resumeId: "stale-resume", matchText: validMatchText },
+    const result = await handleSaveMatchResult(
+      { jobId: "job-1", resumeId: "other-users-resume", matchText: validMatchText },
       "user-7",
       "my-token",
     );
 
-    expect(prisma.user.findUnique).toHaveBeenCalled();
-    const call = (prisma.job.update as any).mock.calls[0][0];
-    const matchData = JSON.parse(call.data.matchData);
-    expect(matchData.resumeId).toBe("resume-1");
+    expect(result.content[0].text).toBe("Resume not found or not owned by this token's user.");
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.job.update).not.toHaveBeenCalled();
   });
 
   it("returns a rate-limit message and never persists when the limit is exceeded", async () => {
@@ -233,7 +241,7 @@ describe("handleSaveMatchResult", () => {
     expect(JSON.parse(data.matchData).descriptionCompleteness).toBe("partial");
   });
 
-  it("scopes the completeness lookup to the caller's MCP-created jobs", async () => {
+  it("scopes the completeness lookup to the caller's jobs", async () => {
     await handleSaveMatchResult(
       { jobId: "job-1", matchText: validMatchText },
       "user-1",
@@ -241,7 +249,7 @@ describe("handleSaveMatchResult", () => {
     );
 
     expect(prisma.job.findFirst).toHaveBeenCalledWith({
-      where: { id: "job-1", userId: "user-1", createdVia: { not: null } },
+      where: { id: "job-1", userId: "user-1" },
       select: { descriptionCompleteness: true },
     });
   });

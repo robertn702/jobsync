@@ -12,7 +12,7 @@ export const MCP_TOOL_DESCRIPTIONS = {
   add_question:
     "Add an entry to the Question Bank. Resolves or creates tags by name. Returns a transparency report of what was matched vs. created.",
   save_match_result:
-    "Persist a job-fit match analysis (produced by you, the agent) against a job previously created with add_job. Call this after add_job hands you a match directive.",
+    "Persist a job-fit match analysis (produced by you, the agent) against a job owned by the current user.",
   add_jobs_batch:
     "Add several jobs in one call. Same per-item behaviour as add_job (including upsert and the match directive); returns one labelled result per item. Use this for scheduled runs instead of N sequential add_job calls.",
   save_match_results_batch:
