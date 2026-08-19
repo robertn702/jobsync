@@ -38,18 +38,26 @@ export async function handleSaveMatchResult(
   }
 
   // Provenance needs only id + title, so avoid the full resume graph that
-  // getDefaultResumeForUser loads for preprocessing. Prefer the resumeId
-  // add_job handed the agent (the resume actually scored against); the
-  // profile.userId scope bounds it to the user's own resumes. Fall back to the
-  // current default if the agent didn't echo an id or it no longer resolves.
-  let resume =
-    input.resumeId != null
-      ? await prisma.resume.findFirst({
-          where: { id: input.resumeId, profile: { userId } },
-          select: { id: true, title: true },
-        })
-      : null;
-  if (!resume) {
+  // getDefaultResumeForUser loads for preprocessing. The profile.userId scope
+  // bounds an explicitly supplied resume to the user's own resumes. Without an
+  // explicit id, use the current default best-effort.
+  let resume: { id: string; title: string } | null = null;
+  if (input.resumeId != null) {
+    resume = await prisma.resume.findFirst({
+      where: { id: input.resumeId, profile: { userId } },
+      select: { id: true, title: true },
+    });
+    if (!resume) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Resume not found or not owned by this token's user.",
+          },
+        ],
+      };
+    }
+  } else {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { defaultResumeId: true },
@@ -65,7 +73,7 @@ export async function handleSaveMatchResult(
   // Same scope as the update below, so a job the caller can't write to
   // never leaks its completeness through this read either.
   const job = await prisma.job.findFirst({
-    where: { id: input.jobId, userId, createdVia: { not: null } },
+    where: { id: input.jobId, userId },
     select: { descriptionCompleteness: true },
   });
 
@@ -85,7 +93,7 @@ export async function handleSaveMatchResult(
 
   try {
     await prisma.job.update({
-      where: { id: input.jobId, userId, createdVia: { not: null } },
+      where: { id: input.jobId, userId },
       data: {
         matchScore: parsed.scores.matchScore,
         matchData: JSON.stringify(matchData),
@@ -97,7 +105,7 @@ export async function handleSaveMatchResult(
         content: [
           {
             type: "text",
-            text: "Job not found, not owned by this token's user, or not eligible for a match via MCP.",
+            text: "Job not found or not owned by this token's user.",
           },
         ],
       };
