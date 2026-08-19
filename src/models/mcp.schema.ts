@@ -28,7 +28,7 @@ export const McpAddJobInputShape = {
   jobDescription: z.string()
     .refine((val) => val === "N/A" || val.length >= 10, "jobDescription must be at least 10 characters")
     .describe("The complete job posting text, copied in full — do not summarize, shorten, or paraphrase it. Markdown-formatted is supported; plain text also works. Use 'N/A' only if no description is available at all."),
-  location: z.string().optional().describe("City, province/state, country, or 'Remote' — e.g. 'Calgary, AB'. Do not include a street address."),
+  location: z.string().optional().describe("City, province/state, country, or 'Remote' — e.g. 'Calgary, AB'. Use the posting's structured location, title, or apply page; never infer it from incidental geography in company or about prose. Do not include a street address."),
   source: z.string().optional().describe("Job board or site the listing came from, e.g. 'LinkedIn', 'Indeed', 'company website'. If not stated explicitly, infer it from the job posting's URL/domain when possible instead of leaving it blank."),
   jobType: z.string().optional().describe("Employment type: 'Full-time', 'Part-time', or 'Contract'"),
   workplaceType: workplaceTypeField,

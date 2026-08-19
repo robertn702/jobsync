@@ -260,3 +260,95 @@ describe("handleAddJob upsert routing", () => {
     expect(result.content[0].text).toContain("not eligible");
   });
 });
+
+describe("handleAddJob Greenhouse locations", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (checkMcpRateLimit as any).mockReturnValue({ allowed: true, resetIn: 0 });
+  });
+
+  it("uses the posting location over incidental geography in the description", async () => {
+    mockCreated("title-only");
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ location: { name: "Israel - Tel Aviv" } }),
+    }) as any;
+
+    await handleAddJob(
+      {
+        ...baseInput,
+        jobDescription: "Our New York office works with global teams. This role is based with engineering in Israel.",
+        jobUrl: "https://job-boards.greenhouse.io/acme/jobs/12345",
+        location: "New York, NY",
+      } as any,
+      "user-1",
+      "my-token",
+    );
+
+    expect(createJobFromNames).toHaveBeenCalledWith(
+      expect.objectContaining({ location: "Israel - Tel Aviv" }),
+      "user-1",
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      "https://boards-api.greenhouse.io/v1/boards/acme/jobs/12345",
+      expect.any(Object),
+    );
+  });
+
+  it("falls back to the supplied location when Greenhouse cannot provide one", async () => {
+    mockCreated("title-only");
+    global.fetch = vi.fn().mockResolvedValue({ ok: false }) as any;
+
+    await handleAddJob(
+      {
+        ...baseInput,
+        jobUrl: "https://boards.greenhouse.io/acme/jobs/12345",
+        location: "New York, NY",
+      } as any,
+      "user-1",
+      "my-token",
+    );
+
+    expect(createJobFromNames).toHaveBeenCalledWith(
+      expect.objectContaining({ location: "New York, NY" }),
+      "user-1",
+    );
+  });
+
+  it("uses the enriched location when upserting a duplicate", async () => {
+    (createJobFromNames as any).mockResolvedValue({
+      created: false,
+      duplicateOf: { id: "job-9", title: "Engineer", company: "Acme" },
+      resolutions: [],
+      message: "Duplicate detected.",
+    });
+    (updateJobFromNames as any).mockResolvedValue({
+      updated: true,
+      jobId: "job-9",
+      descriptionChanged: false,
+      descriptionCompleteness: "full",
+      resolutions: [],
+      message: "Job job-9 updated.",
+    });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ location: { name: "Israel - Tel Aviv" } }),
+    }) as any;
+
+    await handleAddJob(
+      {
+        ...baseInput,
+        jobUrl: "https://job-boards.eu.greenhouse.io/acme/jobs/12345",
+        location: "New York, NY",
+        upsert: true,
+      } as any,
+      "user-1",
+      "my-token",
+    );
+
+    expect(updateJobFromNames).toHaveBeenCalledWith(
+      expect.objectContaining({ jobId: "job-9", location: "Israel - Tel Aviv" }),
+      "user-1",
+    );
+  });
+});
