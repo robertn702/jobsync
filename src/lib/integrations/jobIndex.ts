@@ -67,7 +67,7 @@ function sortById<T extends { id?: string }>(items: T[] | undefined): T[] | unde
     : items;
 }
 
-function canonicalizeResume(resume: Resume): Resume {
+export function canonicalizeResume(resume: Resume): Resume {
   return {
     ...resume,
     ResumeSections: sortById(resume.ResumeSections)?.map((section) => ({
