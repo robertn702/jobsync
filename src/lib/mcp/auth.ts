@@ -34,7 +34,11 @@ export async function resolveMcpToken(req: Request): Promise<AuthSuccess | AuthF
 
   let scopes: string[];
   try {
-    scopes = JSON.parse(record.scopes) as string[];
+    const parsedScopes = JSON.parse(record.scopes) as unknown;
+    if (!Array.isArray(parsedScopes) || !parsedScopes.every((scope) => typeof scope === "string")) {
+      throw new Error("Invalid scopes");
+    }
+    scopes = parsedScopes;
   } catch {
     return { ok: false, status: 401, error: "Malformed token scopes" };
   }
