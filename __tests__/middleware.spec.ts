@@ -6,10 +6,11 @@ describe("middleware API matcher", () => {
   const doesMatch = (url: string) =>
     unstable_doesMiddlewareMatch({ config, url });
 
-  it("exempts only the job integration index", () => {
+  it("exempts the job integration index and details", () => {
     expect(doesMatch("/api/integrations/jobs")).toBe(false);
     expect(doesMatch("/api/integrations/jobs?limit=10")).toBe(false);
-    expect(doesMatch("/api/integrations/jobs/child")).toBe(true);
+    expect(doesMatch("/api/integrations/jobs/child")).toBe(false);
+    expect(doesMatch("/api/integrations/jobs/child/deeper")).toBe(true);
   });
 
   it("continues protecting unrelated APIs", () => {
