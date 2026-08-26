@@ -5,13 +5,19 @@ import CreateCoverLetter from "./CreateCoverLetter";
 import CopyResumeDialog from "./CopyResumeDialog";
 import { Card, CardContent, CardTitle } from "../ui/card";
 import { ResponsiveCardHeader } from "../ResponsiveCardHeader";
-import { getResumeList, getDefaultResumeId } from "@/actions/profile.actions";
+import {
+  getResumeList,
+  getDefaultResumeId,
+  getDefaultContactInfo,
+} from "@/actions/profile.actions";
 import { getCoverLetterList } from "@/actions/coverLetter.actions";
 import {
+  ContactInfo,
   CoverLetter,
   ProfileDocument,
   Resume,
 } from "@/models/profile.model";
+import { CoverLetterExportDialog } from "./CoverLetterExportDialog";
 import { APP_CONSTANTS } from "@/lib/constants";
 import Loading from "../Loading";
 import DocumentTable from "./ResumeTable";
@@ -42,6 +48,15 @@ const ProfileContainer = () => {
   const [totalResumes, setTotalResumes] = useState<number>(0);
   const [totalCoverLetters, setTotalCoverLetters] = useState<number>(0);
   const [defaultResumeId, setDefaultResumeId] = useState<string | null>(null);
+  // undefined means "not loaded yet", which gates the export preview.
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null | undefined>(
+    undefined,
+  );
+  const [exportLetter, setExportLetter] = useState<{
+    title: string;
+    content: string;
+  } | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [page, setPage] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const loadResumes = useCallback(
@@ -75,7 +90,15 @@ const ProfileContainer = () => {
   }, []);
 
   const loadDefaultResumeId = useCallback(async () => {
-    setDefaultResumeId(await getDefaultResumeId());
+    // allSettled, not all: contactInfo stuck at undefined would spin the
+    // export preview forever, and a failed letterhead read must not also
+    // cost the default-resume pointer.
+    const [id, contact] = await Promise.allSettled([
+      getDefaultResumeId(),
+      getDefaultContactInfo(),
+    ]);
+    if (id.status === "fulfilled") setDefaultResumeId(id.value);
+    setContactInfo(contact.status === "fulfilled" ? contact.value : null);
   }, []);
 
   const loadDocuments = useCallback(
@@ -164,6 +187,11 @@ const ProfileContainer = () => {
     setCoverLetterDialogOpen(true);
   };
 
+  const onExportCoverLetter = (doc: ProfileDocument) => {
+    setExportLetter({ title: doc.title, content: doc.content ?? "" });
+    setExportDialogOpen(true);
+  };
+
   const setResumeId = (id: string) => {};
 
   return (
@@ -213,12 +241,19 @@ const ProfileContainer = () => {
             setDialogOpen={setCoverLetterDialogOpen}
             coverLetterToEdit={coverLetterToEdit}
             reloadDocuments={reloadDocuments}
+            contactInfo={contactInfo}
           />
           <CopyResumeDialog
             open={copyDialogOpen}
             setOpen={setCopyDialogOpen}
             sourceDoc={resumeToCopy}
             onCopied={reloadDocuments}
+          />
+          <CoverLetterExportDialog
+            open={exportDialogOpen}
+            onOpenChange={setExportDialogOpen}
+            letter={exportLetter}
+            contactInfo={contactInfo}
           />
         </div>
       </ResponsiveCardHeader>
@@ -230,6 +265,7 @@ const ProfileContainer = () => {
               documents={documents}
               editResume={onEditResume}
               editCoverLetter={onEditCoverLetter}
+              exportCoverLetter={onExportCoverLetter}
               copyResume={onCopyResume}
               reloadDocuments={reloadDocuments}
               defaultResumeId={defaultResumeId}

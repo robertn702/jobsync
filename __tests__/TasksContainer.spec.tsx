@@ -856,34 +856,6 @@ describe("TasksContainer Component", () => {
     });
   });
 
-  describe("Filter Change Callback", () => {
-    it("should call onFilterChange when filter changes", async () => {
-      const mockOnFilterChange = vi.fn();
-
-      (getTasksList as any).mockResolvedValue({
-        success: true,
-        data: mockTasks,
-        total: 2,
-      });
-
-      render(
-        <TasksContainer
-          activityTypes={mockActivityTypes}
-          filterKey={undefined}
-          onFilterChange={mockOnFilterChange}
-        />
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText("Task 1")).toBeInTheDocument();
-      });
-
-      // Note: onFilterChange would typically be called from parent component
-      // This test verifies the prop is passed correctly
-      expect(mockOnFilterChange).not.toHaveBeenCalled();
-    });
-  });
-
   describe("Search Feature", () => {
     beforeEach(() => {
       vi.useFakeTimers({ shouldAdvanceTime: true });

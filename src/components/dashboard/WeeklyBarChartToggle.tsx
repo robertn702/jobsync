@@ -82,7 +82,7 @@ export default function WeeklyBarChartToggle({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2 mb-1 mt-3">
           <div className="flex items-baseline gap-2 min-w-0">
-            <CardTitle className="text-green-600 truncate">
+            <CardTitle className="text-lg text-green-600 truncate">
               Weekly {current.label}
             </CardTitle>
             {totalHours !== null && (

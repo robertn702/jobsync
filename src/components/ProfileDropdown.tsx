@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { PowerIcon, Settings, Info } from "lucide-react";
+import { PowerIcon, Settings, Info, ArrowUpCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,6 +14,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import UserAvatar from "./UserAvatar";
 import { SupportDialog } from "./SupportDialog";
+import { useAppVersion } from "@/hooks/useAppVersion";
 import { cn } from "@/lib/utils";
 
 interface ProfileDropdownProps {
@@ -28,6 +29,7 @@ export function ProfileDropdown({
   signOutAction,
 }: ProfileDropdownProps) {
   const [supportDialogOpen, setSupportDialogOpen] = useState(false);
+  const version = useAppVersion();
   const label = user?.email ?? "My Account";
 
   return (
@@ -41,8 +43,17 @@ export function ProfileDropdown({
                 aria-label="User menu"
                 className="navlink h-10 w-full text-muted-foreground hover:text-foreground"
               >
-                <span className="flex h-full w-14 shrink-0 items-center justify-center">
+                <span className="relative flex h-full w-14 shrink-0 items-center justify-center">
                   <UserAvatar user={user} />
+                  {version?.updateAvailable && (
+                    <>
+                      <span
+                        aria-hidden
+                        className="absolute right-3 top-1 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background"
+                      />
+                      <span className="sr-only">Update available</span>
+                    </>
+                  )}
                 </span>
                 <span
                   className={cn(
@@ -73,6 +84,15 @@ export function ProfileDropdown({
             <Info className="w-5 mr-2" />
             Support
           </DropdownMenuItem>
+          {version?.updateAvailable && (
+            <DropdownMenuItem
+              onClick={() => setSupportDialogOpen(true)}
+              className="cursor-pointer text-primary focus:text-primary"
+            >
+              <ArrowUpCircle className="w-5 mr-2" />
+              Update available
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild className="cursor-pointer">
             <form action={signOutAction}>
@@ -88,6 +108,7 @@ export function ProfileDropdown({
       <SupportDialog
         open={supportDialogOpen}
         onOpenChange={setSupportDialogOpen}
+        version={version}
       />
     </>
   );

@@ -392,6 +392,7 @@ function useAgentChatValue(initialMessages: UIMessage[]) {
     dismissInterrupted,
     clear,
     preflight,
+    refreshPreflight: runPreflight,
     composerNonce,
     panelWidth,
     startResize,

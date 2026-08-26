@@ -22,6 +22,7 @@ vi.mock("@/actions/profile.actions", () => ({
     }),
   ),
   getDefaultResumeId: vi.fn(() => Promise.resolve(null)),
+  getDefaultContactInfo: vi.fn(() => Promise.resolve(null)),
 }));
 
 vi.mock("@/actions/coverLetter.actions", () => ({

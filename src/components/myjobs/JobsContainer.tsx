@@ -1,54 +1,30 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "../ui/card";
-import { Button } from "../ui/button";
-import { SearchInput } from "../SearchInput";
-import { File, ListFilter, Loader, RefreshCw, X } from "lucide-react";
+import { useState } from "react";
+import { Card, CardContent, CardFooter } from "../ui/card";
+import { Loader } from "lucide-react";
 import {
   deleteJobById,
   getJobDetails,
-  getJobsList,
   updateJobStatus,
 } from "@/actions/job.actions";
 import { toastError, toastSuccess } from "@/lib/toast";
 import {
   Company,
   JobLocation,
-  JobResponse,
   JobSource,
   JobStatus,
-  JobsViewMode,
   JobTitle,
   Tag,
 } from "@/models/job.model";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import { APP_CONSTANTS } from "@/lib/constants";
 import Loading from "../Loading";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AddJob } from "./AddJob";
+import { useRouter } from "next/navigation";
 import MyJobsTable from "./MyJobsTable";
 import MyJobsGrid from "./MyJobsGrid";
-import { JobsViewToggle } from "./JobsViewToggle";
 import { NoteDialog } from "./NoteDialog";
-import { format } from "date-fns";
-import { RecordsCount } from "../RecordsCount";
-import { getFromLocalStorage, saveToLocalStorage } from "@/utils/localstorage.utils";
-import { useAgentChat } from "../agent/AgentChatProvider";
+import { useJobFilters } from "./jobs-container/useJobFilters";
+import { useJobsList } from "./jobs-container/useJobsList";
+import { downloadJobsList } from "./jobs-container/downloadJobsCsv";
+import { JobsToolbar } from "./jobs-container/JobsToolbar";
 
 type MyJobsProps = {
   statuses: JobStatus[];
@@ -68,158 +44,48 @@ function JobsContainer({
   tags,
 }: MyJobsProps) {
   const router = useRouter();
-  const pathname = usePathname();
-  const { jobWrites } = useAgentChat();
-  const queryParams = useSearchParams();
-  const createQueryString = useCallback(
-    (name: string, value: string) => {
-      const params = new URLSearchParams(queryParams.toString());
-      params.set(name, value);
-
-      return params.toString();
-    },
-    [queryParams],
-  );
-  const [companyFilter, setCompanyFilter] = useState<string | null>(
-    queryParams.get("company"),
-  );
-  const [titleFilter, setTitleFilter] = useState<string | null>(
-    queryParams.get("title"),
-  );
-  const [locationFilter, setLocationFilter] = useState<string | null>(
-    queryParams.get("location"),
-  );
-  const [sourceFilter, setSourceFilter] = useState<string | null>(
-    queryParams.get("source"),
-  );
-  const [appliedFilter, setAppliedFilter] = useState(
-    queryParams.get("applied") === "true",
-  );
-  const [jobs, setJobs] = useState<JobResponse[]>([]);
-  const [viewMode, setViewMode] = useState<JobsViewMode>("table");
-  const [page, setPage] = useState(1);
-  const [totalJobs, setTotalJobs] = useState(0);
-  const [filterKey, setFilterKey] = useState<string>("none");
-  const [searchTerm, setSearchTerm] = useState("");
   const [editJob, setEditJob] = useState(null);
-  const [initialLoading, setInitialLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [noteJobId, setNoteJobId] = useState("");
-  const hasSearched = useRef(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const companyLabel = companyFilter
-    ? companies.find((c) => c.value === companyFilter)?.label
-    : null;
+  const {
+    queryParams,
+    companyFilter,
+    titleFilter,
+    locationFilter,
+    sourceFilter,
+    appliedFilter,
+    companyLabel,
+    titleLabel,
+    locationLabel,
+    sourceLabel,
+    clearCompanyFilter,
+    clearTitleFilter,
+    clearLocationFilter,
+    clearSourceFilter,
+  } = useJobFilters({ companies, titles, locations, sources });
 
-  const titleLabel = titleFilter
-    ? titles.find((t) => t.value === titleFilter)?.label
-    : null;
-
-  const locationLabel = locationFilter
-    ? locations.find((l) => l.value === locationFilter)?.label
-    : null;
-
-  const sourceLabel = sourceFilter
-    ? sources.find((s) => s.value === sourceFilter)?.label
-    : null;
-
-  const clearCompanyFilter = () => {
-    setCompanyFilter(null);
-    setAppliedFilter(false);
-    router.push(pathname);
-  };
-
-  const clearTitleFilter = () => {
-    setTitleFilter(null);
-    setAppliedFilter(false);
-    router.push(pathname);
-  };
-
-  const clearLocationFilter = () => {
-    setLocationFilter(null);
-    setAppliedFilter(false);
-    router.push(pathname);
-  };
-
-  const clearSourceFilter = () => {
-    setSourceFilter(null);
-    setAppliedFilter(false);
-    router.push(pathname);
-  };
-
-  useEffect(() => {
-    const cp = queryParams.get("company");
-    const tp = queryParams.get("title");
-    const lp = queryParams.get("location");
-    const sp = queryParams.get("source");
-    const ap = queryParams.get("applied") === "true";
-    setCompanyFilter(cp);
-    setTitleFilter(tp);
-    setLocationFilter(lp);
-    setSourceFilter(sp);
-    setAppliedFilter(ap);
-  }, [queryParams]);
-
-  // Read after mount: localStorage is unavailable during SSR, so seeding the
-  // initial state from it would cause a hydration mismatch.
-  useEffect(() => {
-    const saved = getFromLocalStorage(
-      APP_CONSTANTS.JOBS_VIEW_MODE_STORAGE_KEY,
-      null,
-    );
-    if (saved === "cards" || saved === "table") setViewMode(saved);
-  }, []);
-
-  const onChangeViewMode = (mode: JobsViewMode) => {
-    setViewMode(mode);
-    saveToLocalStorage(APP_CONSTANTS.JOBS_VIEW_MODE_STORAGE_KEY, mode);
-  };
-
-  const jobsPerPage = APP_CONSTANTS.RECORDS_PER_PAGE;
-
-  const loadJobs = useCallback(
-    async (page: number, filter?: string, search?: string) => {
-      if (page === 1) setInitialLoading(true);
-      else setLoadingMore(true);
-      const { success, data, total, message } = await getJobsList(
-        page,
-        jobsPerPage,
-        filter && filter !== "none" ? filter : undefined,
-        search,
-        companyFilter || undefined,
-        appliedFilter || undefined,
-        titleFilter || undefined,
-        locationFilter || undefined,
-        sourceFilter || undefined,
-      );
-      if (success && data) {
-        setJobs((prev) => (page === 1 ? data : [...prev, ...data]));
-        setTotalJobs(total);
-        setPage(page);
-      } else {
-        toastError(message);
-      }
-      setInitialLoading(false);
-      setLoadingMore(false);
-    },
-    [
-      jobsPerPage,
-      companyFilter,
-      appliedFilter,
-      titleFilter,
-      locationFilter,
-      sourceFilter,
-    ],
-  );
-
-  const reloadJobs = useCallback(async () => {
-    await loadJobs(1, undefined, searchTerm || undefined);
-    if (filterKey !== "none") {
-      setFilterKey("none");
-    }
-  }, [loadJobs, filterKey, searchTerm]);
+  const {
+    jobs,
+    viewMode,
+    onChangeViewMode,
+    totalJobs,
+    filterKey,
+    searchTerm,
+    setSearchTerm,
+    initialLoading,
+    loadingMore,
+    loadJobs,
+    reloadJobs,
+    onFilterChange,
+    sentinelRef,
+  } = useJobsList({
+    companyFilter,
+    appliedFilter,
+    titleFilter,
+    locationFilter,
+    sourceFilter,
+  });
 
   const onDeleteJob = async (jobId: string) => {
     const { res, success, message } = await deleteJobById(jobId);
@@ -260,220 +126,39 @@ function JobsContainer({
     setNoteDialogOpen(true);
   };
 
-  useEffect(() => {
-    (async () => await loadJobs(1))();
-  }, [loadJobs]);
-
-  // The agent saves the job server-side, so only this counter tells us a row
-  // appeared. Deps are the counter alone: reloadJobs changes with every filter
-  // and keystroke, and the effects above already cover those.
-  useEffect(() => {
-    if (jobWrites === 0) return;
-    void reloadJobs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobWrites]);
-
-  useEffect(() => {
-    if (searchTerm !== "") {
-      hasSearched.current = true;
-    }
-    // Skip only on initial mount when search is empty
-    if (searchTerm === "" && !hasSearched.current) return;
-
-    const timer = setTimeout(() => {
-      loadJobs(1, filterKey, searchTerm || undefined);
-    }, 300);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm]);
-
-  // Infinite scroll: auto-load next page when sentinel is visible
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          !initialLoading &&
-          !loadingMore &&
-          jobs.length < totalJobs
-        ) {
-          loadJobs(page + 1, filterKey, searchTerm || undefined);
-        }
-      },
-      { threshold: APP_CONSTANTS.INTERSECTION_OBSERVER_THRESHOLD },
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [
-    jobs.length,
-    totalJobs,
-    page,
-    filterKey,
-    searchTerm,
-    initialLoading,
-    loadingMore,
-    loadJobs,
-  ]);
-
-  const onFilterChange = (filterBy: string) => {
-    setFilterKey(filterBy);
-    loadJobs(1, filterBy, searchTerm || undefined);
-  };
-
-  const downloadJobsList = async () => {
-    try {
-      const res = await fetch("/api/jobs/export", {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/csv",
-        },
-      });
-      if (!res.ok) {
-        throw new Error("Failed to download jobs!");
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `jobsync-${format(new Date(), "yyyy-MM-dd")}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toastSuccess("Downloaded successfully!");
-    } catch (error) {
-      toastError(
-        error instanceof Error ? error.message : "Unknown error occurred.",
-      );
-    }
-  };
-
   return (
     <>
       <Card x-chunk="dashboard-06-chunk-0">
-        <CardHeader className="flex-row flex-wrap justify-between items-center gap-3">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <CardTitle>Jobs</CardTitle>
-            {!initialLoading && totalJobs > 0 && (
-              <RecordsCount
-                count={jobs.length}
-                total={totalJobs}
-                label="jobs"
-              />
-            )}
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 ml-auto">
-            <JobsViewToggle value={viewMode} onChange={onChangeViewMode} />
-            {companyLabel && (
-              <button
-                onClick={clearCompanyFilter}
-                className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
-              >
-                {companyLabel}
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-            {titleLabel && (
-              <button
-                onClick={clearTitleFilter}
-                className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
-              >
-                {titleLabel}
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-            {locationLabel && (
-              <button
-                onClick={clearLocationFilter}
-                className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
-              >
-                {locationLabel}
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-            {sourceLabel && (
-              <button
-                onClick={clearSourceFilter}
-                className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
-              >
-                {sourceLabel}
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 w-8 p-0"
-              disabled={initialLoading}
-              title="Reload jobs"
-              onClick={() => loadJobs(1, filterKey, searchTerm || undefined)}
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${initialLoading ? "animate-spin" : ""}`}
-              />
-              <span className="sr-only">Reload jobs</span>
-            </Button>
-            <SearchInput
-              value={searchTerm}
-              onChange={setSearchTerm}
-              placeholder="Search jobs..."
-            />
-            <Select value={filterKey} onValueChange={onFilterChange}>
-              <SelectTrigger
-                className="w-[120px] h-8"
-                data-testid="job-filter-select"
-              >
-                <ListFilter className="h-3.5 w-3.5" />
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Filter by</SelectLabel>
-                  <SelectSeparator />
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="applied">Applied</SelectItem>
-                  <SelectItem value="interview">Interview</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                  <SelectItem value="PT">Part-time</SelectItem>
-                  <SelectItem value="accepted">
-                    Accepted (discovered)
-                  </SelectItem>
-                  <SelectItem value="dismissed">
-                    Dismissed (discovered)
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1"
-              disabled={initialLoading}
-              onClick={downloadJobsList}
-            >
-              <File className="h-3.5 w-3.5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Export
-              </span>
-            </Button>
-            <AddJob
-              jobStatuses={statuses}
-              companies={companies}
-              jobTitles={titles}
-              locations={locations}
-              jobSources={sources}
-              tags={tags}
-              editJob={editJob}
-              resetEditJob={resetEditJob}
-              initialOpen={queryParams.get("add-job") === "true"}
-            />
-          </div>
-        </CardHeader>
+        <JobsToolbar
+          jobsCount={jobs.length}
+          totalJobs={totalJobs}
+          initialLoading={initialLoading}
+          viewMode={viewMode}
+          onChangeViewMode={onChangeViewMode}
+          companyLabel={companyLabel}
+          onClearCompanyFilter={clearCompanyFilter}
+          titleLabel={titleLabel}
+          onClearTitleFilter={clearTitleFilter}
+          locationLabel={locationLabel}
+          onClearLocationFilter={clearLocationFilter}
+          sourceLabel={sourceLabel}
+          onClearSourceFilter={clearSourceFilter}
+          onReload={() => loadJobs(1, filterKey, searchTerm || undefined)}
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          filterKey={filterKey}
+          onFilterChange={onFilterChange}
+          onDownload={downloadJobsList}
+          statuses={statuses}
+          companies={companies}
+          titles={titles}
+          locations={locations}
+          sources={sources}
+          tags={tags}
+          editJob={editJob}
+          resetEditJob={resetEditJob}
+          addJobInitialOpen={queryParams.get("add-job") === "true"}
+        />
         <CardContent>
           {initialLoading && <Loading />}
           {jobs.length > 0 &&

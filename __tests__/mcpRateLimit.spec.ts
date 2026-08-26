@@ -2,13 +2,81 @@ import { checkMcpRateLimit } from "@/lib/mcp/rate-limit";
 import { APP_CONSTANTS } from "@/lib/constants";
 
 describe("checkMcpRateLimit", () => {
+  const originalMax = process.env.MCP_RATE_LIMIT_MAX;
+
   beforeEach(() => {
+    delete process.env.MCP_RATE_LIMIT_MAX;
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
   });
 
   afterEach(() => {
+    if (originalMax === undefined) {
+      delete process.env.MCP_RATE_LIMIT_MAX;
+    } else {
+      process.env.MCP_RATE_LIMIT_MAX = originalMax;
+    }
     vi.useRealTimers();
+  });
+
+  it("disables limiting when configured to zero without consuming a stored count", () => {
+    const userId = "user-rate-limit-disabled";
+    process.env.MCP_RATE_LIMIT_MAX = "0";
+    for (let request = 0; request < 100; request++) {
+      expect(checkMcpRateLimit(userId)).toEqual({
+        allowed: true,
+        remaining: Infinity,
+        resetIn: 0,
+      });
+    }
+
+    process.env.MCP_RATE_LIMIT_MAX = "1";
+    expect(checkMcpRateLimit(userId)).toEqual({
+      allowed: true,
+      remaining: 0,
+      resetIn: APP_CONSTANTS.MCP_RATE_LIMIT_WINDOW_MS,
+    });
+    expect(checkMcpRateLimit(userId).allowed).toBe(false);
+  });
+
+  it.each([
+    undefined,
+    "",
+    "not-a-number",
+    "-1",
+    "-0",
+    "+0",
+    "00",
+    "0x0",
+    "0b0",
+    "0o0",
+    "0O0",
+    "1e2",
+    "1.5",
+    "9007199254740992",
+  ])(
+    "falls back to the default for an invalid MCP_RATE_LIMIT_MAX of %s",
+    (value) => {
+      if (value === undefined) {
+        delete process.env.MCP_RATE_LIMIT_MAX;
+      } else {
+        process.env.MCP_RATE_LIMIT_MAX = value;
+      }
+
+      expect(checkMcpRateLimit(`user-rate-limit-fallback-${String(value)}`)).toMatchObject({
+        allowed: true,
+        remaining: APP_CONSTANTS.MCP_RATE_LIMIT_MAX - 1,
+      });
+    },
+  );
+
+  it("uses a positive safe integer override", () => {
+    process.env.MCP_RATE_LIMIT_MAX = "2";
+    const userId = "user-rate-limit-override";
+
+    expect(checkMcpRateLimit(userId).remaining).toBe(1);
+    expect(checkMcpRateLimit(userId).remaining).toBe(0);
+    expect(checkMcpRateLimit(userId).allowed).toBe(false);
   });
 
   it("allows the first request and reports MAX - 1 remaining", () => {

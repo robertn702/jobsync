@@ -26,8 +26,10 @@ import { toastSuccess, toastError } from "@/lib/toast";
 import { XCircle, Loader2, RefreshCw } from "lucide-react";
 import { checkOllamaConnection } from "@/utils/ai.utils";
 import { getUserSettings, updateAiSettings } from "@/actions/userSettings.actions";
+import { useAgentChat } from "@/components/agent/AgentChatProvider";
 
 function AiSettings() {
+  const { isOpen: isAgentChatOpen, refreshPreflight } = useAgentChat();
   const [selectedModel, setSelectedModel] = useState<AiModel>(defaultModel);
   const [fetchedModels, setFetchedModels] = useState<string[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
@@ -184,6 +186,7 @@ function AiSettings() {
       });
       if (result.success) {
         toastSuccess("AI Settings saved successfully.", "Saved!");
+        if (isAgentChatOpen) void refreshPreflight();
       } else {
         toastError(result.message || "Failed to save AI settings.");
       }

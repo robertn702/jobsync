@@ -2,16 +2,14 @@ import {
   getActivityCalendarData,
   getActivityDataForPeriod,
   getJobsActivityForPeriod,
-  getJobsAppliedForPeriod,
+  getJobsActivitySummary,
   getRecentActivities,
   getRecentJobs,
-  getTopActivityTypesByDuration,
 } from "@/actions/dashboard.actions";
 import ActivityCalendar from "@/components/dashboard/ActivityCalendar";
+import JobsActivityCard from "@/components/dashboard/JobsActivityCard";
 import JobsApplied from "@/components/dashboard/JobsAppliedCard";
-import NumberCardToggle from "@/components/dashboard/NumberCardToggle";
 import RecentCardToggle from "@/components/dashboard/RecentCardToggle";
-import TopActivitiesCard from "@/components/dashboard/TopActivitiesCard";
 import WeeklyBarChartToggle from "@/components/dashboard/WeeklyBarChartToggle";
 
 import { Metadata } from "next";
@@ -22,25 +20,21 @@ export const metadata: Metadata = {
 
 export default async function Dashboard() {
   const [
-    { count: jobsAppliedLast7Days, trend: trendFor7Days },
-    { count: jobsAppliedLast30Days, trend: trendFor30Days },
+    summary7Days,
+    summary30Days,
     recentJobs,
     recentActivities,
     weeklyData,
     activitiesData,
     activityCalendarData,
-    topActivities7Days,
-    topActivities30Days,
   ] = await Promise.all([
-    getJobsAppliedForPeriod(7),
-    getJobsAppliedForPeriod(30),
+    getJobsActivitySummary(7),
+    getJobsActivitySummary(30),
     getRecentJobs(),
     getRecentActivities(),
     getJobsActivityForPeriod(),
     getActivityDataForPeriod(),
     getActivityCalendarData(),
-    getTopActivityTypesByDuration(7),
-    getTopActivityTypesByDuration(30),
   ]);
   const activityCalendarDataKeys = Object.keys(activityCalendarData);
   const activitiesDataKeys = (data: string[]) =>
@@ -56,24 +50,10 @@ export default async function Dashboard() {
       <div className="@container grid grid-cols-1 auto-rows-max items-start gap-2 md:gap-2 @3xl/main:col-span-2">
         <div className="grid gap-2 @lg:grid-cols-4">
           <JobsApplied />
-          <NumberCardToggle
+          <JobsActivityCard
             data={[
-              {
-                label: "7d",
-                num: jobsAppliedLast7Days,
-                trend: trendFor7Days,
-              },
-              {
-                label: "30d",
-                num: jobsAppliedLast30Days,
-                trend: trendFor30Days,
-              },
-            ]}
-          />
-          <TopActivitiesCard
-            data={[
-              { label: "7d", activities: topActivities7Days },
-              { label: "30d", activities: topActivities30Days },
+              { label: "7d", summary: summary7Days },
+              { label: "30d", summary: summary30Days },
             ]}
           />
         </div>

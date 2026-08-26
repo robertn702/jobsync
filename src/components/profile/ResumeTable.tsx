@@ -1,6 +1,7 @@
 "use client";
 import {
   Copy,
+  FileDown,
   FilePenLine,
   MoreVertical,
   Paperclip,
@@ -44,6 +45,7 @@ type DocumentTableProps = {
   documents: ProfileDocument[];
   editResume: (doc: ProfileDocument) => void;
   editCoverLetter: (doc: ProfileDocument) => void;
+  exportCoverLetter: (doc: ProfileDocument) => void;
   copyResume: (doc: ProfileDocument) => void;
   reloadDocuments: () => void;
   defaultResumeId?: string | null;
@@ -53,6 +55,7 @@ function DocumentTable({
   documents,
   editResume,
   editCoverLetter,
+  exportCoverLetter,
   copyResume,
   reloadDocuments,
   defaultResumeId,
@@ -143,9 +146,11 @@ function DocumentTable({
         <TableHeader>
           <TableRow>
             <TableHead>Title</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead className="hidden md:table-cell">Updated</TableHead>
+            <TableHead className="whitespace-nowrap">Type</TableHead>
+            <TableHead className="whitespace-nowrap">Created</TableHead>
+            <TableHead className="hidden md:table-cell whitespace-nowrap">
+              Updated
+            </TableHead>
             <TableHead>Jobs</TableHead>
             <TableHead>Actions</TableHead>
             <TableHead>
@@ -183,16 +188,16 @@ function DocumentTable({
                     </button>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <StatusBadge
                     label={isResume ? "Resume" : "Cover Letter"}
                     color={DOCUMENT_TYPE_BADGE_COLORS[doc.type]}
                   />
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   {doc.createdAt && format(doc.createdAt, "PP")}
                 </TableCell>
-                <TableCell className="hidden md:table-cell">
+                <TableCell className="hidden md:table-cell whitespace-nowrap">
                   {doc.updatedAt && format(doc.updatedAt, "PP")}
                 </TableCell>
                 <TableCell>{doc.jobCount}</TableCell>
@@ -245,13 +250,23 @@ function DocumentTable({
                           )}
                         </>
                       ) : (
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={() => editCoverLetter(doc)}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit Cover Letter
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => editCoverLetter(doc)}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit Cover Letter
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => exportCoverLetter(doc)}
+                            data-testid="export-cover-letter-menu-item"
+                          >
+                            <FileDown className="mr-2 h-4 w-4" />
+                            Export to PDF
+                          </DropdownMenuItem>
+                        </>
                       )}
                       <DropdownMenuItem
                         className="text-red-600 cursor-pointer"
