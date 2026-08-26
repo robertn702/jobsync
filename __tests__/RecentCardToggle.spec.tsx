@@ -32,6 +32,8 @@ describe("RecentCardToggle - Start Activity", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // usePersistedTabIndex persists the tab; clearAllMocks does not reset it.
+    localStorage.clear();
   });
 
   it("starts the activity directly when nothing is currently in progress", async () => {

@@ -13,14 +13,14 @@ import { useRouter } from "next/navigation";
 export default function JobsAppliedCard() {
   const router = useRouter();
   return (
-    <Card className="sm:col-span-2 min-w-0">
+    <Card className="sm:col-span-2 min-w-0 flex flex-col">
       <CardHeader className="pb-3">
-        <CardTitle className="text-green-600">Dashboard</CardTitle>
+        <CardTitle className="text-lg text-green-600">Dashboard</CardTitle>
         <CardDescription className="max-w-lg text-balance leading-relaxed">
           Create new jobs, tasks, automations, and questions.
         </CardDescription>
       </CardHeader>
-      <CardFooter className="grid grid-cols-2 gap-2">
+      <CardFooter className="mt-auto grid grid-cols-2 gap-2">
         <Button
           variant="outline"
           className="justify-start min-w-0"

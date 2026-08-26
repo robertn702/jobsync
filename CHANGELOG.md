@@ -1,5 +1,81 @@
 # Changelog
 
+## [1.1.18](https://github.com/Gsync/jobsync/compare/v1.1.17...v1.1.18) (2026-08-23)
+
+
+### Features
+
+* implement version check and update notifications
+* update JobsActivityCard to label slices directly on the chart and add arcLabelLines function
+* add jobs trend calculation and minor adjustments
+* merge the Jobs and Activities cards into one donut card
+* add getDefaultContactInfo, the export dialog and panel, both trigger surfaces and the filename suffix
+* add contact-parts helper, letter template, PDF generator and export guard
+* add CoverLetterExportSettings model, storage key and buildLetterStyles
+* add customizable export settings (font, size, margins, spacing) with token-based style builders
+* wire the preview + settings panes into ExportPdfDialog and add a fit page/width preview control
+* add PdfPreviewPane canvas renderer and ExportSettingsPanel template picker
+* add useResumePdfPreview hook with debounced, cached blob generation
+* add ResumeExportSettings model, canExportResume predicate, prepared-blob export path, and dev:webpack script
+* restructure job actions into separate modules for better organization and maintainability refactor(activity, profile): move requireUser to shared module for reuse across action directories
+
+### Bug Fixes
+
+* update Jobs heading and adjust activity count assertion in tests
+
+### Other Changes
+
+* add GitHub Actions workflow for automated releases
+* move preview pane, settings rows, preview/settings hooks and dialog shell into the shared layer
+* extract shared pdfExport model, style tokens, HTML converter and download helpers
+* replace direct resume ownership check with assertResumeOwnership for improved code clarity
+* replace getCurrentUser with requireUser for authentication consistency across automation actions
+* simplify TasksContainer by removing filter change callback; introduce TasksToolbar for enhanced UI and functionality
+* JobsContainer to use custom hooks for filters and job list management; introduce JobsToolbar for improved UI organization
+* split actions into separate modules for better organization and maintainability
+* automation.actions, reduce file size, use barrel, make it readable
+* Refactor task actions into separate modules for better organization and maintainability; add company actions for CRUD operations; implement dashboard actions for activity and job statistics; introduce shared utility functions for date handling.
+* restructure actions into separate modules for better organization and maintainability
+* resumeContainer file, use barrel, reduce file size, make it readable
+* import actions from specific files, reduce file length, make it more readable
+
+
+## [1.1.17](https://github.com/Gsync/jobsync/compare/v1.1.16...v1.1.17) (2026-08-16)
+
+
+### Features
+
+*  add Data settings panel with backup export, guarded import and snapshot rollback
+*  add backup preflight, import, snapshot list and rollback routes
+*  add destructive backup import with pre-import snapshot, wipe, ordered inserts and post-commit sync
+*  add backup import transforms — id map, FK rewrite, path sanitization and emptiness policy
+*  add backup export with ownership-scoped payload assembly and download route
+*  add backup foundations — jszip, size caps, model spec table, zod schemas and capped zip reader
+*  add activity break UI — banner Break button, break modal, ring timer (Phase 3)
+*  add client-side activity break state to ActivityContext (Phase 2)
+*  add server-side activity break lifecycle (Phase 1)
+*  replace activity time inputs with a TimePicker, fix start/end validation, and add specs
+*  add ExportPdfDialog component showing template previews
+
+### Bug Fixes
+
+*  patch npm audit vulnerabilities in root and evals lockfiles
+*  add whitespace-nowrap class to table headers and cells for better layout
+*  persist tasks activity filter in URL, sticky sidebar, hide empty types, portal tooltip content
+*  verify the session user exists, guard backup import and sign out stale dashboard sessions
+*  ensure proper handling of BACKUP_SNAPSHOT_MAX_TOTAL_BYTES in pruneSnapshots tests
+
+### Other Changes
+
+*  add real-database round-trip, rollback coverage and e2e for data backup; align settings card title size
+* enhance activity management tests to include pause and resume functionality with breaks
+*  remove release script as part of project refactoring
+*  update CardTitle font size for consistency across components
+*  update layout classes in Dashboard and Header for improved responsiveness
+*  update CardHeader and layout classes for improved responsiveness
+*  dedupe no-resumes/pick-a-resume JSX in AgentResultCard renderers
+
+
 ## [1.1.16](https://github.com/Gsync/jobsync/compare/v1.1.15...v1.1.16) (2026-08-09)
 
 

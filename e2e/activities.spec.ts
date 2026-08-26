@@ -144,6 +144,72 @@ test.describe.serial("Activities Management", () => {
     await expect(stoppedRow).toContainText(/min/);
   });
 
+  test("should pause and resume an activity with a break", async ({
+    page,
+    cleanup,
+  }) => {
+    const activityName = uniqueName("E2E Break Activity");
+    const activityType = uniqueName("E2E Activity Type");
+    await createActivity(page, activityName, activityType, cleanup);
+
+    const row = page
+      .getByRole("row", { name: new RegExp(activityName, "i") })
+      .first();
+    await expect(row).toBeVisible({ timeout: 10000 });
+
+    await row.getByRole("button", { name: "Toggle menu" }).click();
+    await page
+      .getByRole("menuitem", { name: "Start Activity" })
+      .click({ force: true });
+
+    // Not getByRole({ name: "Stop" }) like the sibling tests: that is a
+    // substring match, and the modal's Stop Activity button has the same
+    // accessible name as the banner's. The aria-label attribute is the only
+    // thing that distinguishes them, and only the banner sets it.
+    const stopButton = page.locator('button[aria-label="Stop Activity"]');
+    await expect(stopButton).toBeVisible({ timeout: 10000 });
+
+    // The banner button only opens the modal; the break starts on play.
+    await page.getByRole("button", { name: "Take a break" }).click();
+    const breakDialog = page.getByRole("dialog");
+    await expect(breakDialog).toBeVisible({ timeout: 10000 });
+    await expect(breakDialog.getByText("Break", { exact: true })).toBeVisible();
+    await expect(breakDialog.getByText("15:00")).toBeVisible();
+
+    await breakDialog.getByRole("button", { name: "Start break" }).click();
+
+    // The centre control flipping to Resume proves the server opened the
+    // break: the context only re-renders from the action's returned activity.
+    const resumeButton = breakDialog.getByRole("button", {
+      name: "Resume activity",
+    });
+    await expect(resumeButton).toBeVisible({ timeout: 10000 });
+    // A running break drops the close X — Resume and Stop are the only exits.
+    await expect(breakDialog.getByRole("button", { name: "Close" })).toHaveCount(
+      0,
+    );
+
+    // The modal locks the app: nothing behind it is clickable, so navigating
+    // away must fail rather than change the route.
+    // Located by href, not by name: the sidebar collapses to icons, so the
+    // "Jobs" label is not reliably part of the link's accessible name.
+    await expect(
+      page
+        .locator('a[href="/dashboard/myjobs"]')
+        .first()
+        .click({ timeout: 3000 }),
+    ).rejects.toThrow();
+    await expect(page).toHaveURL(/\/dashboard\/activities/);
+
+    await resumeButton.click();
+    await expect(breakDialog).not.toBeVisible({ timeout: 10000 });
+
+    // The activity survived the break and is still running.
+    await expect(stopButton).toBeVisible();
+    await stopButton.click({ force: true });
+    await expect(stopButton).not.toBeVisible({ timeout: 10000 });
+  });
+
   test("should delete an activity", async ({ page, cleanup }) => {
     const activityName = uniqueName("E2E Delete Activity");
     const activityType = uniqueName("E2E Activity Type");

@@ -35,10 +35,19 @@ export const APP_CONSTANTS = {
   SIDEBAR_STORAGE_KEY: "sidebar-expanded",
   DASHBOARD_WEEKLY_CHART_STORAGE_KEY: "dashboard-weekly-chart-tab",
   DASHBOARD_RECENT_CARD_STORAGE_KEY: "dashboard-recent-card-tab",
+  DASHBOARD_JOBS_ACTIVITY_STORAGE_KEY: "dashboard-jobs-activity-tab",
   LAST_JOB_LOCATION_STORAGE_KEY: "last-job-location",
   LAST_JOB_SOURCE_STORAGE_KEY: "last-job-source",
   JOBS_VIEW_MODE_STORAGE_KEY: "jobs-view-mode",
+  RESUME_PREVIEW_FIT_STORAGE_KEY: "resume-preview-fit",
+  RESUME_EXPORT_SETTINGS_STORAGE_KEY: "resume-export-settings",
+  COVER_LETTER_EXPORT_SETTINGS_STORAGE_KEY: "cover-letter-export-settings",
   SIDEBAR_DOM_ID: "app-sidebar",
+
+  // Update check: the upstream repo and how long a GitHub release lookup is
+  // cached. A day is plenty — releases are rare and the check is unauthenticated.
+  GITHUB_REPO: "Gsync/jobsync",
+  UPDATE_CHECK_REVALIDATE_SECONDS: 86_400,
   // Paired so the rail width and its matching content offset can't drift.
   SIDEBAR_WIDTH: {
     expanded: { rail: "w-56", contentOffset: "sm:pl-56" },
@@ -187,6 +196,22 @@ export const APP_CONSTANTS = {
 
   // File uploads
   UPLOADS_DIR: process.env.NODE_ENV !== "production" ? "data" : "/data",
+
+  // Backup caps. Everything is held in RAM at once, so the upload cap is what
+  // bounds memory on a box also running Next and the scheduler; the
+  // uncompressed cap is the zip-bomb guard. 50 MB rather than the spec's 25:
+  // resumes are 5 MB each and PDFs barely deflate, so six of them produce an
+  // export a 25 MB cap would refuse — a backup you cannot restore is worse
+  // than a large one.
+  BACKUP_MAX_UPLOAD_BYTES: 50 * 1024 * 1024,
+  BACKUP_MAX_UNCOMPRESSED_BYTES: 100 * 1024 * 1024,
+  BACKUP_MAX_ENTRIES: 5000,
+  // Pre-import snapshots retained per user. The count alone does not bound
+  // disk — nothing caps one snapshot's size — and these live on the same
+  // volume as the SQLite database, so prune on total bytes as well.
+  BACKUP_SNAPSHOT_KEEP: 5,
+  BACKUP_SNAPSHOT_MAX_TOTAL_BYTES: 250 * 1024 * 1024,
+
   MAX_RESUME_FILE_SIZE_BYTES: 5 * 1024 * 1024, // 5 MB
   RESUME_ALLOWED_MIME_TYPES: [
     "application/pdf",

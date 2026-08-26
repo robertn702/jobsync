@@ -2,7 +2,7 @@ import React from "react";
 import { Document, Link, Page, Text, View } from "@react-pdf/renderer";
 import { format } from "date-fns";
 import { Resume, ResumeSection, SectionType } from "@/models/profile.model";
-import { professionalStyles as s } from "./styles/professional.styles";
+import type { ProfessionalStyles } from "./styles/professional.styles";
 import { ResumeHtmlNodes } from "./generateResumePdf";
 
 function formatDate(date: Date | undefined | null): string {
@@ -20,7 +20,13 @@ function yearRange(startDate: Date, endDate?: Date | null): string {
   return `${start} – ${end}`;
 }
 
-function SectionHeading({ title }: { title: string }) {
+function SectionHeading({
+  title,
+  s,
+}: {
+  title: string;
+  s: ProfessionalStyles;
+}) {
   return (
     <View style={s.sectionHeadingRow}>
       <Text style={s.sectionHeadingLabel}>{title}</Text>
@@ -30,14 +36,20 @@ function SectionHeading({ title }: { title: string }) {
 }
 
 // Renders sections that use licenseOrCertifications (CERTIFICATION, LICENSE, COURSE, etc.)
-function CertLikeSection({ section }: { section: ResumeSection }) {
+function CertLikeSection({
+  section,
+  s,
+}: {
+  section: ResumeSection;
+  s: ProfessionalStyles;
+}) {
   const entries = section.licenseOrCertifications;
   if (!entries || entries.length === 0) return null;
   return (
     <View>
-      <SectionHeading title={section.sectionTitle} />
+      <SectionHeading title={section.sectionTitle} s={s} />
       {entries.map((cert, i) => (
-        <View key={cert.id ?? i} style={{ marginBottom: 6 }} wrap={false}>
+        <View key={cert.id ?? i} style={s.certBlock} wrap={false}>
           <Text style={s.entryTitleBlock}>{cert.title}</Text>
           <Text style={s.entryMeta}>{cert.organization}</Text>
           {(cert.issueDate || cert.expirationDate) && (
@@ -62,9 +74,14 @@ function CertLikeSection({ section }: { section: ResumeSection }) {
 type Props = {
   resume: Resume;
   htmlNodes: ResumeHtmlNodes;
+  styles: ProfessionalStyles;
 };
 
-export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
+export function ProfessionalResumeDocument({
+  resume,
+  htmlNodes,
+  styles: s,
+}: Props) {
   const { ContactInfo, ResumeSections } = resume;
 
   const summarySection = ResumeSections?.find(
@@ -132,7 +149,7 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
                     {ContactInfo.url1 && (
                       <Link
                         src={ContactInfo.url1}
-                        style={{ color: "#1a1a1a", textDecoration: "none" }}
+                        style={s.link}
                       >
                         {ContactInfo.url1.replace(/^https?:\/\/(www\.)?/, "")}
                       </Link>
@@ -141,7 +158,7 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
                     {ContactInfo.url2 && (
                       <Link
                         src={ContactInfo.url2}
-                        style={{ color: "#1a1a1a", textDecoration: "none" }}
+                        style={s.link}
                       >
                         {ContactInfo.url2.replace(/^https?:\/\/(www\.)?/, "")}
                       </Link>
@@ -158,7 +175,7 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
 
         {/* Summary — no section heading */}
         {summarySection?.summary?.content && htmlNodes.summary.length > 0 && (
-          <View style={{ marginBottom: 4 }}>{htmlNodes.summary}</View>
+          <View style={s.summaryBlock}>{htmlNodes.summary}</View>
         )}
 
         {/* Skills */}
@@ -173,7 +190,7 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
           const hasCategories = Array.from(grouped.keys()).some((k) => k !== "");
           return (
             <View>
-              <SectionHeading title={skillsSection.sectionTitle} />
+              <SectionHeading title={skillsSection.sectionTitle} s={s} />
               {hasCategories ? (() => {
                 const entries = Array.from(grouped.entries());
                 const rows: (typeof entries)[] = [];
@@ -181,15 +198,15 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
                   rows.push(entries.slice(i, i + 2));
                 }
                 return rows.map((row, rowIdx) => (
-                  <View key={rowIdx} style={[s.twoColRow, { marginBottom: 4 }]}>
+                  <View key={rowIdx} style={s.skillTwoColRow}>
                     {row.map(([cat, items]) => (
                       <View key={cat || "__flat"} style={s.twoColLeft}>
                         {cat ? (
-                          <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", textTransform: "uppercase", marginBottom: 1 }}>
+                          <Text style={s.skillCatLabel}>
                             {cat}
                           </Text>
                         ) : null}
-                        <Text style={{ fontSize: 10 }}>
+                        <Text style={s.skillVals}>
                           {items.map((sk) => sk.Tag?.label).filter(Boolean).join(" · ")}
                         </Text>
                       </View>
@@ -198,7 +215,7 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
                   </View>
                 ));
               })() : (
-                <Text style={{ fontSize: 10 }}>
+                <Text style={s.skillVals}>
                   {sorted.map((sk) => sk.Tag?.label).filter(Boolean).join(" · ")}
                 </Text>
               )}
@@ -210,9 +227,9 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
         {experienceSection?.workExperiences &&
           experienceSection.workExperiences.length > 0 && (
             <View>
-              <SectionHeading title={experienceSection.sectionTitle} />
+              <SectionHeading title={experienceSection.sectionTitle} s={s} />
               {experienceSection.workExperiences.map((exp, i) => (
-                <View key={exp.id ?? i} style={{ marginBottom: 8 }}>
+                <View key={exp.id ?? i} style={s.entryBlock}>
                   <View wrap={false}>
                     <View style={s.entryHeaderRow}>
                       <Text style={s.entryTitle}>{exp.jobTitle.label}</Text>
@@ -237,9 +254,9 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
           if (sec.workExperiences && sec.workExperiences.length > 0) {
             return (
               <View key={sec.id}>
-                <SectionHeading title={sec.sectionTitle} />
+                <SectionHeading title={sec.sectionTitle} s={s} />
                 {sec.workExperiences.map((exp, i) => (
-                  <View key={exp.id ?? i} style={{ marginBottom: 8 }}>
+                  <View key={exp.id ?? i} style={s.entryBlock}>
                     <View wrap={false}>
                       <View style={s.entryHeaderRow}>
                         <Text style={s.entryTitle}>{exp.jobTitle.label}</Text>
@@ -259,7 +276,7 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
             );
           }
           if (sec.licenseOrCertifications && sec.licenseOrCertifications.length > 0) {
-            return <CertLikeSection key={sec.id} section={sec} />;
+            return <CertLikeSection key={sec.id} section={sec} s={s} />;
           }
           return null;
         })}
@@ -271,9 +288,9 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
             <View style={s.twoColLeft}>
               {educationSection?.educations && educationSection.educations.length > 0 && (
                 <View>
-                  <SectionHeading title={educationSection.sectionTitle} />
+                  <SectionHeading title={educationSection.sectionTitle} s={s} />
                   {educationSection.educations.map((edu, i) => (
-                    <View key={edu.id ?? i} style={{ marginBottom: 8 }}>
+                    <View key={edu.id ?? i} style={s.entryBlock}>
                       <View wrap={false}>
                         <View style={s.entryHeaderRow}>
                           <Text style={s.entryTitle}>
@@ -294,7 +311,7 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
             {/* Right: Certifications and Licenses */}
             <View style={s.twoColRight}>
               {certLikeSections.map((sec) => (
-                <CertLikeSection key={sec.id} section={sec} />
+                <CertLikeSection key={sec.id} section={sec} s={s} />
               ))}
             </View>
           </View>

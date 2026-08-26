@@ -138,16 +138,18 @@ test.describe("Dashboard page", () => {
     ).toBeVisible();
 
     await expect(
-      page.getByRole("heading", { name: "Jobs", exact: true }),
+      page.getByRole("heading", { name: "Jobs & Activity", exact: true }),
     ).toBeVisible();
-    // exact: true — the weekly chart's Y-axis legend also renders
-    // "JOBS APPLIED" (uppercase, via nivo axisLeftLegend), and getByText
-    // matches case-insensitively by default, so it would otherwise resolve
-    // to both elements.
-    await expect(page.getByText("Jobs Applied", { exact: true })).toBeVisible();
-
+    // The merged donut's center reports the applied-job count for the active
+    // period. The job created above is applied today, so the default 7d tab
+    // must show at least one. Specs share a user, so don't assert an exact
+    // count. Match the count's own span: the center stacks hours, jobs and
+    // trend with no separators, so asserting on the container would match
+    // against a concatenation like "17h8 jobs14%".
     await expect(
-      page.getByRole("heading", { name: "Activities", exact: true }),
+      page
+        .getByTestId("jobs-activity-total")
+        .getByText(/^[1-9]\d* jobs?$/),
     ).toBeVisible();
 
     await expect(
@@ -206,16 +208,10 @@ test.describe("Dashboard page", () => {
   test("should toggle the recent, weekly, jobs and activities cards", async ({
     page,
   }) => {
-    const numberToggle = page.getByTestId("number-card-toggle-group");
-    await numberToggle.getByRole("button", { name: "30d" }).click();
+    const jobsActivityToggle = page.getByTestId("jobs-activity-toggle-group");
+    await jobsActivityToggle.getByRole("button", { name: "30d" }).click();
     await expect(
-      numberToggle.getByRole("button", { name: "30d" }),
-    ).toHaveClass(/bg-primary/);
-
-    const topActivitiesToggle = page.getByTestId("top-activities-toggle-group");
-    await topActivitiesToggle.getByRole("button", { name: "30d" }).click();
-    await expect(
-      topActivitiesToggle.getByRole("button", { name: "30d" }),
+      jobsActivityToggle.getByRole("button", { name: "30d" }),
     ).toHaveClass(/bg-primary/);
 
     const recentToggle = page.getByTestId("recent-card-toggle-group");

@@ -1,11 +1,11 @@
 "use client";
-import { Loader } from "lucide-react";
+import { FileDown, Loader } from "lucide-react";
 import { Button } from "../ui/button";
 import { useForm } from "react-hook-form";
 import { CoverLetterFormSchema } from "@/models/coverLetterForm.schema";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,19 +23,22 @@ import {
   FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
-import { CoverLetter } from "@/models/profile.model";
+import { ContactInfo, CoverLetter } from "@/models/profile.model";
 import { toastSuccess, toastError } from "@/lib/toast";
 import {
   createCoverLetter,
   updateCoverLetter,
 } from "@/actions/coverLetter.actions";
 import Tiptap from "../TiptapEditor";
+import { CoverLetterExportDialog } from "./CoverLetterExportDialog";
+import { canExportCoverLetter } from "./cover-letter-export-dialog/canExportCoverLetter";
 
 type CreateCoverLetterProps = {
   dialogOpen: boolean;
   setDialogOpen: (open: boolean) => void;
   coverLetterToEdit?: CoverLetter | null;
   reloadDocuments: () => void;
+  contactInfo: ContactInfo | null | undefined;
 };
 
 function CreateCoverLetter({
@@ -43,8 +46,10 @@ function CreateCoverLetter({
   setDialogOpen,
   coverLetterToEdit,
   reloadDocuments,
+  contactInfo,
 }: CreateCoverLetterProps) {
   const [isPending, startTransition] = useTransition();
+  const [exportOpen, setExportOpen] = useState(false);
 
   const pageTitle = coverLetterToEdit
     ? "Edit Cover Letter"
@@ -68,6 +73,16 @@ function CreateCoverLetter({
   } = form;
 
   const closeDialog = () => setDialogOpen(false);
+
+  const watchedTitle = form.watch("title");
+  const watchedContent = form.watch("content");
+
+  // Memoized: watch() re-renders this component on every keystroke, and the
+  // guard parses the whole letter.
+  const canExport = useMemo(
+    () => canExportCoverLetter(watchedContent),
+    [watchedContent],
+  );
 
   useEffect(() => {
     reset({
@@ -157,6 +172,16 @@ function CreateCoverLetter({
 
             <div className="mt-4">
               <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-2 md:mt-0"
+                  disabled={!canExport}
+                  onClick={() => setExportOpen(true)}
+                >
+                  <FileDown className="h-4 w-4" />
+                  Export to PDF
+                </Button>
                 <div>
                   <Button
                     type="reset"
@@ -177,6 +202,15 @@ function CreateCoverLetter({
             </div>
           </form>
         </Form>
+        {/* Stacked on top of the editor, so closing it returns you to your
+            unsaved edits with focus restored. Exports the current form
+            values, saved or not. */}
+        <CoverLetterExportDialog
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          letter={{ title: watchedTitle ?? "", content: watchedContent ?? "" }}
+          contactInfo={contactInfo}
+        />
       </DialogContent>
     </Dialog>
   );

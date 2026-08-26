@@ -11,6 +11,7 @@ import { AgentChatPanel } from "@/components/agent/AgentChatPanel";
 import { getChatConversation } from "@/actions/agentChat.actions";
 import { APP_CONSTANTS } from "@/lib/constants";
 import { getCurrentUser } from "@/utils/user.utils";
+import StaleSessionSignOut from "@/components/StaleSessionSignOut";
 import { signOut } from "@/auth";
 
 export default async function RootLayout({
@@ -27,19 +28,25 @@ export default async function RootLayout({
   const conversation = await getChatConversation();
   const user = await getCurrentUser();
 
+  const signOutAction = async () => {
+    "use server";
+    await signOut({ redirectTo: "/signin" });
+  };
+
+  // The session outlived the database it was minted against: middleware still
+  // passes the signed cookie, but the user row is gone and every scoped query
+  // would read as empty rather than unauthorized.
+  if (!user) {
+    return <StaleSessionSignOut signOutAction={signOutAction} />;
+  }
+
   return (
     <ActivityProvider>
       <SidebarProvider initialExpanded={initialExpanded}>
         <RightRailProvider>
           <AgentChatProvider initialMessages={conversation.data ?? []}>
             <div className="flex min-h-screen w-full flex-col bg-muted/40">
-              <Sidebar
-                user={user}
-                signOutAction={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/signin" });
-                }}
-              />
+              <Sidebar user={user} signOutAction={signOutAction} />
               <SidebarInset>
                 <Header />
                 <GlobalActivityBanner />

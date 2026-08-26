@@ -83,7 +83,7 @@ export default function RecentCardToggle({
     <Card className="mb-2 @3xl/main:absolute @3xl/main:inset-0 @3xl/main:mb-0 @3xl/main:flex @3xl/main:flex-col">
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-green-600 min-w-0 truncate">
+          <CardTitle className="text-lg text-green-600 min-w-0 truncate">
             Recent {tabs[activeIndex]}
           </CardTitle>
           <div
@@ -109,7 +109,7 @@ export default function RecentCardToggle({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="grid auto-rows-max gap-6 @3xl/main:min-h-0 @3xl/main:flex-1 @3xl/main:overflow-y-auto">
+      <CardContent className="grid auto-rows-max gap-6 px-4 @3xl/main:min-h-0 @3xl/main:flex-1 @3xl/main:overflow-y-auto">
         {activeIndex === 0
           ? groupJobsByDate(jobs).map(([date, dateJobs]) => (
               <div key={date} className="grid gap-4">
@@ -157,7 +157,7 @@ export default function RecentCardToggle({
                     <div
                       key={activity.id}
                       data-testid="recent-activity-row"
-                      className="group relative flex items-center gap-1"
+                      className="group relative flex items-center gap-2"
                     >
                       <Button
                         title="Start Activity"
@@ -165,10 +165,10 @@ export default function RecentCardToggle({
                         size="icon"
                         variant="ghost"
                         onClick={() => requestStart(() => startActivity(activity.id))}
-                        className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-300"
+                        className="h-9 w-9 shrink-0 opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-300"
                       >
                         <span>
-                          <CirclePlay className="text-green-600 h-3.5 w-3.5" />
+                          <CirclePlay className="text-green-600 h-6 w-6" />
                         </span>
                       </Button>
                       <div className="grid gap-1 min-w-0 flex-1">

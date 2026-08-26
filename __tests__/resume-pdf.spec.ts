@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeFilename, RESUME_LAYOUT_LABELS } from "@/components/profile/resume-pdf";
+import { sanitizeFilename } from "@/components/pdf-export/download";
+import { RESUME_LAYOUT_LABELS } from "@/models/resumeExport.model";
 
 // DOMParser is available in jsdom (vitest environment)
-import { htmlToPdfNodes } from "@/components/profile/resume-pdf/html-to-pdf";
-import type { HtmlStyleSet } from "@/components/profile/resume-pdf/types";
+import { htmlToPdfNodes } from "@/components/pdf-export/html-to-pdf";
+import type { HtmlStyleSet } from "@/components/pdf-export/types";
 
 // Minimal style sets — avoid @react-pdf StyleSheet.create in test env
 const simpleStyleSet: HtmlStyleSet = {
@@ -25,32 +26,36 @@ const professionalStyleSet: HtmlStyleSet = {
 
 describe("sanitizeFilename", () => {
   it("returns 'resume' for empty string", () => {
-    expect(sanitizeFilename("")).toBe("resume");
+    expect(sanitizeFilename("", "resume")).toBe("resume");
   });
 
   it("returns 'resume' for string of only unsafe chars", () => {
-    expect(sanitizeFilename('???/\\:*?"<>|')).toBe("resume");
+    expect(sanitizeFilename('???/\\:*?"<>|', "resume")).toBe("resume");
   });
 
   it("strips null bytes and control characters", () => {
-    expect(sanitizeFilename("my\x00resume\x1f")).toBe("myresume");
+    expect(sanitizeFilename("my\x00resume\x1f", "resume")).toBe("myresume");
   });
 
   it("truncates to 200 chars", () => {
     const long = "a".repeat(250);
-    expect(sanitizeFilename(long)).toHaveLength(200);
+    expect(sanitizeFilename(long, "resume")).toHaveLength(200);
   });
 
   it("leaves a clean string unchanged", () => {
-    expect(sanitizeFilename("Senior Backend Resume")).toBe(
+    expect(sanitizeFilename("Senior Backend Resume", "resume")).toBe(
       "Senior Backend Resume",
     );
   });
 
   it("collapses extra whitespace", () => {
-    expect(sanitizeFilename("Senior   Backend  Resume")).toBe(
+    expect(sanitizeFilename("Senior   Backend  Resume", "resume")).toBe(
       "Senior Backend Resume",
     );
+  });
+
+  it("uses the caller's fallback, not a hardcoded one", () => {
+    expect(sanitizeFilename("   ", "cover-letter")).toBe("cover-letter");
   });
 });
 
