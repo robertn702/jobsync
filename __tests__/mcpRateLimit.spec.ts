@@ -39,7 +39,20 @@ describe("checkMcpRateLimit", () => {
     expect(checkMcpRateLimit(userId).allowed).toBe(false);
   });
 
-  it.each([undefined, "", "not-a-number", "-1", "1.5", "9007199254740992"])(
+  it.each([
+    undefined,
+    "",
+    "not-a-number",
+    "-1",
+    "-0",
+    "+0",
+    "00",
+    "0x0",
+    "0b0",
+    "1e2",
+    "1.5",
+    "9007199254740992",
+  ])(
     "falls back to the default for an invalid MCP_RATE_LIMIT_MAX of %s",
     (value) => {
       if (value === undefined) {

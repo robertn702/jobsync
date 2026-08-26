@@ -14,6 +14,9 @@ function getMaxRateLimit(): number {
   const value = process.env.MCP_RATE_LIMIT_MAX?.trim();
 
   if (!value) return APP_CONSTANTS.MCP_RATE_LIMIT_MAX;
+  if (!/^(0|[1-9]\d*)$/.test(value)) {
+    return APP_CONSTANTS.MCP_RATE_LIMIT_MAX;
+  }
 
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 0) {
