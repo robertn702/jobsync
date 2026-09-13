@@ -4,6 +4,7 @@ import {
   createJobSource,
   deleteJobById,
   getJobDetails,
+  getJobEvaluations,
   getJobsList,
   getJobSourceList,
   getStatusList,
@@ -31,11 +32,13 @@ vi.mock("@prisma/client", () => {
       create: vi.fn(),
     },
     job: {
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
       count: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
       delete: vi.fn(),
     },
     location: {
@@ -1165,7 +1168,7 @@ describe("jobActions", () => {
 
     it("should save match score and data successfully", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.job.update as any).mockResolvedValue({});
+      (prisma.job.updateMany as any).mockResolvedValue({ count: 1 });
 
       const matchData = JSON.stringify({
         matchScore: 85,
@@ -1178,16 +1181,28 @@ describe("jobActions", () => {
       const result = await saveJobMatchResult("job-id", 85, matchData);
 
       expect(result).toStrictEqual({ success: true });
-      expect(prisma.job.update).toHaveBeenCalledTimes(1);
-      expect(prisma.job.update).toHaveBeenCalledWith({
-        where: { id: "job-id", userId: mockUser.id },
+      expect(prisma.job.updateMany).toHaveBeenCalledTimes(1);
+      expect(prisma.job.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: "job-id",
+          userId: mockUser.id,
+          evaluations: { none: { evaluatorKey: "goal160" } },
+        },
         data: { matchScore: 85, matchData },
       });
     });
 
+    it("preserves the canonical structured cache", async () => {
+      (getCurrentUser as any).mockResolvedValue(mockUser);
+      (prisma.job.updateMany as any).mockResolvedValue({ count: 0 });
+
+      expect(await saveJobMatchResult("job-id", 10, "{}"))
+        .toStrictEqual({ success: true, structuredScorePreserved: true });
+    });
+
     it("should handle database errors", async () => {
       (getCurrentUser as any).mockResolvedValue(mockUser);
-      (prisma.job.update as any).mockRejectedValue(
+      (prisma.job.updateMany as any).mockRejectedValue(
         new Error("Record not found"),
       );
 
@@ -1196,6 +1211,65 @@ describe("jobActions", () => {
       expect(result).toStrictEqual({
         success: false,
         message: "Record not found",
+      });
+    });
+  });
+
+  describe("getJobEvaluations", () => {
+    it("returns current plus immutable history ordered for the authenticated owner", async () => {
+      (getCurrentUser as any).mockResolvedValue(mockUser);
+      const rows = [
+        {
+          id: "new",
+          evaluatorKey: "goal160",
+          hardGates: '{"version":"v1"}',
+          dimensionScores: '{"role_fit":90}',
+          evaluatedAt: new Date("2026-09-13T12:00:00Z"),
+          createdAt: new Date("2026-09-13T12:00:01Z"),
+        },
+        {
+          id: "old",
+          evaluatorKey: "goal160",
+          hardGates: '{"version":"v1"}',
+          dimensionScores: '{}',
+          evaluatedAt: new Date("2026-09-12T12:00:00Z"),
+          createdAt: new Date("2026-09-12T12:00:01Z"),
+        },
+      ];
+      (prisma.job.findFirst as any).mockResolvedValue({ evaluations: rows });
+
+      const result = await getJobEvaluations("job-id");
+
+      expect(prisma.job.findFirst).toHaveBeenCalledWith({
+        where: { id: "job-id", userId: mockUser.id },
+        select: {
+          evaluations: {
+            where: { evaluatorKey: "goal160" },
+            orderBy: [
+              { evaluatedAt: "desc" },
+              { createdAt: "desc" },
+              { id: "desc" },
+            ],
+          },
+        },
+      });
+      expect(result).toMatchObject({
+        success: true,
+        current: { id: "new", hardGates: { version: "v1" } },
+        history: [
+          { id: "new", dimensionScores: { role_fit: 90 } },
+          { id: "old" },
+        ],
+      });
+    });
+
+    it("does not expose evaluation existence for another user's job", async () => {
+      (getCurrentUser as any).mockResolvedValue(mockUser);
+      (prisma.job.findFirst as any).mockResolvedValue(null);
+
+      expect(await getJobEvaluations("other-job")).toStrictEqual({
+        success: false,
+        message: "Job not found",
       });
     });
   });

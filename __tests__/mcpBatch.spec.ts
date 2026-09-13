@@ -120,6 +120,7 @@ describe("handleSaveMatchResultsBatch", () => {
   });
 
   it("continues after a failing item", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     (handleSaveMatchResult as any)
       .mockRejectedValueOnce(new Error("nope"))
       .mockResolvedValueOnce({ content: [{ type: "text", text: "saved 2" }] });
@@ -135,7 +136,11 @@ describe("handleSaveMatchResultsBatch", () => {
       "my-token",
     );
 
-    expect(result.content[0].text).toContain("[1/2] job-1: Error: nope");
+    expect(result.content[0].text).toContain(
+      "[1/2] job-1: Unable to save match result.",
+    );
     expect(result.content[0].text).toContain("[2/2] job-2: saved 2");
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 });

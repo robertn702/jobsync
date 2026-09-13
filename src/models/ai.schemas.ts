@@ -47,6 +47,44 @@ export type JobMatchResult = {
   body: string;
 };
 
+export const JOB_EVALUATION_LANES = [
+  "fde",
+  "frontend_fullstack",
+  "applied_ai",
+  "product_devex",
+  "other",
+] as const;
+
+export const JOB_PURSUIT_PRIORITIES = ["top", "normal", "low", "skip"] as const;
+
+export type JobEvaluationLane = (typeof JOB_EVALUATION_LANES)[number];
+export type JobPursuitPriority = (typeof JOB_PURSUIT_PRIORITIES)[number];
+
+export type JobEvaluationHardGates = {
+  version: "v1";
+  compensation_below_floor: boolean;
+  excessive_travel: boolean;
+  geography_incompatible: boolean;
+  people_or_autonomy_hard_no: boolean;
+  unsustainable_balance: boolean;
+  stale_or_uninteresting_domain: boolean;
+  structural_role_stack_mismatch: boolean;
+};
+
+export type StructuredJobEvaluation = {
+  evaluatorKey: "goal160";
+  lane: JobEvaluationLane;
+  fitScore: number;
+  pursuitPriority: JobPursuitPriority;
+  criteriaVersion: string;
+  hardGates: JobEvaluationHardGates;
+  dimensionScores: Record<string, number>;
+  evaluatorDefinitionHash: string;
+  inputHash: string;
+  resultHash: string;
+  evaluatedAt: string;
+};
+
 // Lexical pre-rank breakdown persisted next to the LLM verdict (tuning signal).
 export type PrerankComponents = {
   titleScore: number;
@@ -73,4 +111,16 @@ export type JobMatchData = JobMatchScores & {
   prerankComponents?: PrerankComponents;
   // Set by the MCP path: how complete the job description was when scored.
   descriptionCompleteness?: DescriptionCompleteness;
+  // Cached copy of the current versioned evaluation for legacy match readers.
+  evaluatorKey?: StructuredJobEvaluation["evaluatorKey"];
+  lane?: StructuredJobEvaluation["lane"];
+  fitScore?: StructuredJobEvaluation["fitScore"];
+  pursuitPriority?: StructuredJobEvaluation["pursuitPriority"];
+  criteriaVersion?: StructuredJobEvaluation["criteriaVersion"];
+  hardGates?: StructuredJobEvaluation["hardGates"];
+  dimensionScores?: StructuredJobEvaluation["dimensionScores"];
+  evaluatorDefinitionHash?: StructuredJobEvaluation["evaluatorDefinitionHash"];
+  inputHash?: StructuredJobEvaluation["inputHash"];
+  resultHash?: StructuredJobEvaluation["resultHash"];
+  evaluatedAt?: StructuredJobEvaluation["evaluatedAt"];
 };

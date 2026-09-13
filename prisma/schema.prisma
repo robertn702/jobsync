@@ -313,6 +313,7 @@ model Job {
   coverLetterId String?
   Notes         Note[]
   tags        Tag[]
+  evaluations JobEvaluation[]
 
   // Automation discovery fields
   automationId    String?
@@ -333,6 +334,28 @@ model Job {
   // Also has a hand-written partial unique index (not expressible here):
   // UNIQUE(userId, jobUrl) WHERE automationId IS NOT NULL
   // See migrations/20260710000002_job_automation_url_unique
+}
+
+model JobEvaluation {
+  id                      String   @id @default(uuid())
+  jobId                   String
+  job                     Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  evaluatorKey            String
+  lane                    String
+  fitScore                Int
+  pursuitPriority         String
+  criteriaVersion         String
+  hardGates               String
+  dimensionScores         String
+  evaluatorDefinitionHash String
+  inputHash               String
+  resultHash              String
+  payloadHash             String
+  evaluatedAt             DateTime
+  createdAt               DateTime @default(now())
+
+  @@unique([jobId, evaluatorKey, resultHash])
+  @@index([jobId, evaluatorKey, evaluatedAt, createdAt])
 }
 
 model ActivityType {

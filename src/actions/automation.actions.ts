@@ -31,6 +31,7 @@ import { getResumeById } from "@/actions/profile.actions";
 import { getJobDetails } from "@/actions/job.actions";
 import { defaultUserSettings } from "@/models/userSettings.model";
 import { automationLogger } from "@/lib/automation-logger";
+import { saveLegacyMatchCache } from "@/lib/jobs/matchCache";
 
 function formatError(
   error: unknown,
@@ -753,12 +754,17 @@ export async function analyzeDiscoveredJob(jobId: string): Promise<{
       analyzed: true,
     });
 
-    await db.job.update({
-      where: { id: jobId, userId: user.id },
-      data: { matchScore: scores.matchScore, matchData },
+    const saved = await saveLegacyMatchCache(db, {
+      jobId,
+      userId: user.id,
+      matchScore: scores.matchScore,
+      matchData,
     });
 
-    return { success: true, matchScore: scores.matchScore };
+    return {
+      success: true,
+      matchScore: saved ? scores.matchScore : (job.matchScore ?? undefined),
+    };
   } catch (error) {
     return formatError(error, "Failed to analyze discovered job");
   }
