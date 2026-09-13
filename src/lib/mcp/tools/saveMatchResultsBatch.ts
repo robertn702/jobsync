@@ -17,8 +17,9 @@ export async function handleSaveMatchResultsBatch(
     try {
       const result = await handleSaveMatchResult(item, userId, tokenName);
       text = result.content[0].text;
-    } catch (err: any) {
-      text = `Error: ${err?.message ?? "Unknown error"}`;
+    } catch (error: unknown) {
+      console.error("Failed to save MCP match-result batch item", error);
+      text = "Unable to save match result.";
     }
     lines.push(`${label}: ${text}`);
 

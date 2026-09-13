@@ -6,9 +6,18 @@ const prisma = new PrismaClient();
 
 vi.mock("@prisma/client", () => {
   const mPrismaClient = {
-    job: { update: vi.fn(), findFirst: vi.fn() },
+    job: { update: vi.fn(), updateMany: vi.fn(), findFirst: vi.fn() },
+    jobEvaluation: {
+      findUnique: vi.fn(),
+      updateMany: vi.fn(),
+      update: vi.fn(),
+      create: vi.fn(),
+    },
     user: { findUnique: vi.fn() },
     resume: { findFirst: vi.fn() },
+    $transaction: vi.fn(async (callback: (tx: unknown) => unknown) =>
+      callback(mPrismaClient),
+    ),
   };
   return { PrismaClient: vi.fn(function () { return mPrismaClient; }) };
 });
@@ -31,9 +40,13 @@ describe("handleSaveMatchResult", () => {
       title: "My Resume",
     });
     (prisma.job.update as any).mockResolvedValue({ id: "job-1" });
+    (prisma.job.updateMany as any).mockResolvedValue({ count: 1 });
     (prisma.job.findFirst as any).mockResolvedValue({
       descriptionCompleteness: "full",
     });
+    (prisma.jobEvaluation.findUnique as any).mockResolvedValue(null);
+    (prisma.jobEvaluation.updateMany as any).mockResolvedValue({ count: 0 });
+    (prisma.jobEvaluation.create as any).mockResolvedValue({ id: "evaluation-1" });
   });
 
   it("parses a valid matchText and persists clamped score + shaped matchData", async () => {
@@ -43,15 +56,19 @@ describe("handleSaveMatchResult", () => {
       "my-token",
     );
 
-    expect(prisma.job.update).toHaveBeenCalledWith({
-      where: { id: "job-1", userId: "user-1", createdVia: { not: null } },
+    expect(prisma.job.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "job-1",
+        userId: "user-1",
+        evaluations: { none: { evaluatorKey: "goal160" } },
+      },
       data: {
         matchScore: 78,
         matchData: expect.any(String),
       },
     });
 
-    const call = (prisma.job.update as any).mock.calls[0][0];
+    const call = (prisma.job.updateMany as any).mock.calls[0][0];
     const matchData = JSON.parse(call.data.matchData);
     expect(matchData).toMatchObject({
       matchScore: 78,
@@ -78,11 +95,11 @@ describe("handleSaveMatchResult", () => {
     );
 
     expect(result.content[0].text).toContain("Could not parse a SCORES line");
-    expect(prisma.job.update).not.toHaveBeenCalled();
+    expect(prisma.job.updateMany).not.toHaveBeenCalled();
   });
 
   it("returns a not-found/not-eligible message on P2025 (non-owned or non-MCP-created job)", async () => {
-    (prisma.job.update as any).mockRejectedValue({ code: "P2025" });
+    (prisma.job.updateMany as any).mockRejectedValue({ code: "P2025" });
 
     const result = await handleSaveMatchResult(
       { jobId: "someone-elses-job", matchText: validMatchText },
@@ -110,8 +127,8 @@ describe("handleSaveMatchResult", () => {
       "my-token",
     );
 
-    expect(prisma.job.update).toHaveBeenCalledTimes(2);
-    const secondCall = (prisma.job.update as any).mock.calls[1][0];
+    expect(prisma.job.updateMany).toHaveBeenCalledTimes(2);
+    const secondCall = (prisma.job.updateMany as any).mock.calls[1][0];
     expect(secondCall.data.matchScore).toBe(40);
   });
 
@@ -124,7 +141,7 @@ describe("handleSaveMatchResult", () => {
       "my-token",
     );
 
-    const call = (prisma.job.update as any).mock.calls[0][0];
+    const call = (prisma.job.updateMany as any).mock.calls[0][0];
     const matchData = JSON.parse(call.data.matchData);
     expect(matchData.resumeId).toBeUndefined();
     expect(matchData.resumeTitle).toBeUndefined();
@@ -149,7 +166,7 @@ describe("handleSaveMatchResult", () => {
     // Echoed id resolved, so the default lookup is skipped entirely.
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
 
-    const call = (prisma.job.update as any).mock.calls[0][0];
+    const call = (prisma.job.updateMany as any).mock.calls[0][0];
     const matchData = JSON.parse(call.data.matchData);
     expect(matchData.resumeId).toBe("resume-scored");
     expect(matchData.resumeTitle).toBe("Scored Resume");
@@ -168,7 +185,7 @@ describe("handleSaveMatchResult", () => {
     );
 
     expect(prisma.user.findUnique).toHaveBeenCalled();
-    const call = (prisma.job.update as any).mock.calls[0][0];
+    const call = (prisma.job.updateMany as any).mock.calls[0][0];
     const matchData = JSON.parse(call.data.matchData);
     expect(matchData.resumeId).toBe("resume-1");
   });
@@ -186,7 +203,7 @@ describe("handleSaveMatchResult", () => {
     );
 
     expect(result.content[0].text).toContain("Rate limit exceeded");
-    expect(prisma.job.update).not.toHaveBeenCalled();
+    expect(prisma.job.updateMany).not.toHaveBeenCalled();
   });
 
   it("clamps an out-of-range score into 0-100", async () => {
@@ -199,7 +216,7 @@ describe("handleSaveMatchResult", () => {
       "my-token",
     );
 
-    const call = (prisma.job.update as any).mock.calls[0][0];
+    const call = (prisma.job.updateMany as any).mock.calls[0][0];
     expect(call.data.matchScore).toBe(100);
     const matchData = JSON.parse(call.data.matchData);
     expect(matchData.matchScore).toBe(100);
@@ -207,7 +224,8 @@ describe("handleSaveMatchResult", () => {
   });
 
   it("surfaces a generic error message on a non-P2025 DB failure", async () => {
-    (prisma.job.update as any).mockRejectedValue({ message: "connection reset" });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    (prisma.job.updateMany as any).mockRejectedValue({ message: "connection reset" });
 
     const result = await handleSaveMatchResult(
       { jobId: "job-1", matchText: validMatchText },
@@ -215,7 +233,9 @@ describe("handleSaveMatchResult", () => {
       "my-token",
     );
 
-    expect(result.content[0].text).toContain("Error: connection reset");
+    expect(result.content[0].text).toBe("Unable to save match result.");
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it("stamps the job's descriptionCompleteness onto matchData", async () => {
@@ -229,7 +249,7 @@ describe("handleSaveMatchResult", () => {
       "my-token",
     );
 
-    const data = (prisma.job.update as any).mock.calls[0][0].data;
+    const data = (prisma.job.updateMany as any).mock.calls[0][0].data;
     expect(JSON.parse(data.matchData).descriptionCompleteness).toBe("partial");
   });
 
@@ -257,7 +277,8 @@ describe("handleSaveMatchResult", () => {
       "my-token",
     );
 
-    const data = (prisma.job.update as any).mock.calls[0][0].data;
+    const data = (prisma.job.updateMany as any).mock.calls[0][0].data;
     expect(JSON.parse(data.matchData).descriptionCompleteness).toBeUndefined();
   });
+
 });

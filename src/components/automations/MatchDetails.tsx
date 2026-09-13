@@ -6,11 +6,30 @@ import MarkdownIt from "markdown-it";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { TipTapContentViewer } from "@/components/TipTapContentViewer";
-import type { JobMatchData } from "@/models/ai.schemas";
+import type {
+  JobEvaluationLane,
+  JobMatchData,
+  JobPursuitPriority,
+} from "@/models/ai.schemas";
 
 // html:false escapes any raw HTML in the model output; TipTapContentViewer
 // further strips unrecognized tags, so the rendered analysis is safe.
 const md = new MarkdownIt({ html: false, linkify: false, breaks: true });
+
+const laneLabels: Record<JobEvaluationLane, string> = {
+  fde: "FDE",
+  frontend_fullstack: "Frontend / full-stack",
+  applied_ai: "Applied AI",
+  product_devex: "Product / DevEx",
+  other: "Other",
+};
+
+const priorityLabels: Record<JobPursuitPriority, string> = {
+  top: "Top priority",
+  normal: "Normal priority",
+  low: "Low priority",
+  skip: "Skip",
+};
 
 // Legacy matches saved before the markdown refactor have a structured `summary`
 // instead of a `body`. Show what we can rather than rendering blank.
@@ -37,6 +56,14 @@ export function MatchDetails({ matchData, discoveredAt }: MatchDetailsProps) {
         {matchData.recommendation && (
           <Badge variant="outline" className="capitalize">
             {matchData.recommendation}
+          </Badge>
+        )}
+        {matchData.lane && (
+          <Badge variant="secondary">{laneLabels[matchData.lane]}</Badge>
+        )}
+        {matchData.pursuitPriority && (
+          <Badge variant="outline">
+            {priorityLabels[matchData.pursuitPriority]}
           </Badge>
         )}
         {matchData.descriptionCompleteness &&

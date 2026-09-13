@@ -1,0 +1,36 @@
+{
+  "jobId": "job-1",
+  "resumeId": "resume-1",
+  "matchText": "SCORES: match=84 recommendation=good\n\n## Evaluation\nLane: frontend_fullstack\nFit score: 84\nPursuit priority: normal\nConfidence: medium\n\n## Dimension scores\n- balance_signal: 8/10\n- work_mode_fit: 9/10\n- location_fit: 10/10\n- role_fit: 10/10\n- stack_fit: 10/10\n- domain_interest: 9/10\n- apac_presence: 5/10\n- comp_fit: 5/10\n\n## Reasons\n- Balance\n- Role\n- Stack\n\n## Green flags\n- None\n\n## Red flags\n- None\n\n## Arrangement\n- Work mode: hybrid\n- Offices: New York, NY\n- Required office days: 2\n- Required travel: Unknown\n- NYC compatible: yes\n\n## Evidence\n- Two office days\n- New York office\n\n## Missing information\n- Required travel percentage.\n- Expected offer position and whether base can reach $200k.\n\n## Decision rules\n- None\n\n## Provenance\nEvaluator: goal160 (goal160-v2)\nModel: gpt-5.6-luna\nEvaluated: 2026-08-17T00:00:00.000Z\nDefinition hash: 0201fdcea029736558b399fabf8c0cb134321ecabfa7a84e06b0a8320e86ccfb\nInput hash: f61a9d2266d26a0a68830e1d4f066df311fadfd07f3276e51b281953898c3cc1\nResult hash: 67fe12c040804b1f70656115827e34dde20939c0b5d003631cac67b4e96ff349",
+  "evaluation": {
+    "lane": "frontend_fullstack",
+    "fitScore": 84,
+    "pursuitPriority": "normal",
+    "hardGates": {
+      "version": "v1",
+      "compensation_below_floor": false,
+      "geography_incompatible": false,
+      "excessive_travel": false,
+      "people_or_autonomy_hard_no": false,
+      "unsustainable_balance": false,
+      "stale_or_uninteresting_domain": false,
+      "structural_role_stack_mismatch": false
+    },
+    "dimensionScores": {
+      "balance_signal": 80,
+      "work_mode_fit": 90,
+      "location_fit": 100,
+      "role_fit": 100,
+      "stack_fit": 100,
+      "domain_interest": 90,
+      "apac_presence": 50,
+      "comp_fit": 50
+    },
+    "criteriaVersion": "goal160-v2",
+    "evaluatorKey": "goal160",
+    "evaluatorDefinitionHash": "0201fdcea029736558b399fabf8c0cb134321ecabfa7a84e06b0a8320e86ccfb",
+    "inputHash": "f61a9d2266d26a0a68830e1d4f066df311fadfd07f3276e51b281953898c3cc1",
+    "resultHash": "67fe12c040804b1f70656115827e34dde20939c0b5d003631cac67b4e96ff349",
+    "evaluatedAt": "2026-08-17T00:00:00.000Z"
+  }
+}

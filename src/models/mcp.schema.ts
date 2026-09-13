@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { APP_CONSTANTS, JOB_STATUS_VALUES } from "@/lib/constants";
 import { WORKPLACE_TYPES, matchEnumEntry } from "@/models/job.model";
+import {
+  JOB_EVALUATION_LANES,
+  JOB_PURSUIT_PRIORITIES,
+} from "@/models/ai.schemas";
 
 // An enum rather than a described string, for the same reason status is one:
 // a small local model fills an enum-constrained slot and ignores prose hints.
@@ -91,6 +95,35 @@ export const McpAddQuestionSchema = z.object(McpAddQuestionInputShape);
 export type McpAddQuestionInput = z.infer<typeof McpAddQuestionSchema>;
 
 // Raw input shape for MCP tool registration (no transforms needed)
+const evaluationHash = z
+  .string()
+  .regex(/^[a-f0-9]{64}$/, "must be a lowercase SHA-256 hash");
+
+export const McpJobEvaluationSchema = z.object({
+  evaluatorKey: z.literal("goal160"),
+  lane: z.enum(JOB_EVALUATION_LANES),
+  fitScore: z.number().int().min(0).max(100),
+  pursuitPriority: z.enum(JOB_PURSUIT_PRIORITIES),
+  criteriaVersion: z.string().min(1),
+  hardGates: z
+    .object({
+      version: z.literal("v1"),
+      compensation_below_floor: z.boolean(),
+      excessive_travel: z.boolean(),
+      geography_incompatible: z.boolean(),
+      people_or_autonomy_hard_no: z.boolean(),
+      unsustainable_balance: z.boolean(),
+      stale_or_uninteresting_domain: z.boolean(),
+      structural_role_stack_mismatch: z.boolean(),
+    })
+    .strict(),
+  dimensionScores: z.record(z.string(), z.number().min(0).max(100)),
+  evaluatorDefinitionHash: evaluationHash,
+  inputHash: evaluationHash,
+  resultHash: evaluationHash,
+  evaluatedAt: z.string().datetime({ offset: true }),
+});
+
 export const McpSaveMatchResultInputShape = {
   jobId: z.string().min(1).describe("The id of the job returned by add_job."),
   resumeId: z
@@ -103,9 +136,25 @@ export const McpSaveMatchResultInputShape = {
   matchText: z.string().min(20).describe(
     "Your full match analysis: a leading 'SCORES: match=<0-100> recommendation=<strong|good|partial|weak>' line, then a markdown body.",
   ),
+  evaluation: McpJobEvaluationSchema.optional().describe(
+    "Optional versioned structured evaluation. Legacy callers may omit it.",
+  ),
 };
 
-export const McpSaveMatchResultSchema = z.object(McpSaveMatchResultInputShape);
+export const McpSaveMatchResultSchema = z
+  .object(McpSaveMatchResultInputShape)
+  .superRefine((value, context) => {
+    if (!value.evaluation) return;
+    const match = value.matchText.match(/^SCORES:\s*match=(\d+)/im);
+    const textScore = match ? Math.max(0, Math.min(100, Number(match[1]))) : null;
+    if (textScore !== value.evaluation.fitScore) {
+      context.addIssue({
+        code: "custom",
+        path: ["evaluation", "fitScore"],
+        message: "fitScore must equal the score in matchText",
+      });
+    }
+  });
 export type McpSaveMatchResultInput = z.infer<typeof McpSaveMatchResultSchema>;
 
 // No arguments — always reviews the caller's default resume.

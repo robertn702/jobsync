@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/utils/user.utils";
 import { APP_CONSTANTS } from "@/lib/constants";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { saveLegacyMatchCache } from "@/lib/jobs/matchCache";
 
 export const getStatusList = async (): Promise<any | undefined> => {
   try {
@@ -506,15 +507,54 @@ export const saveJobMatchResult = async (
       throw new Error("Not authenticated");
     }
 
-    await prisma.job.update({
-      where: { id: jobId, userId: user.id },
-      data: { matchScore, matchData },
+    const saved = await saveLegacyMatchCache(prisma, {
+      jobId,
+      userId: user.id,
+      matchScore,
+      matchData,
     });
 
-    return { success: true };
+    return saved
+      ? { success: true }
+      : { success: true, structuredScorePreserved: true };
   } catch (error) {
     const msg = "Failed to save match result.";
     return handleError(error, msg);
+  }
+};
+
+export const getJobEvaluations = async (jobId: string) => {
+  const user = await getCurrentUser();
+  if (!user) return { success: false as const, message: "Not authenticated" };
+
+  try {
+    const job = await prisma.job.findFirst({
+      where: { id: jobId, userId: user.id },
+      select: {
+        evaluations: {
+          where: { evaluatorKey: "goal160" },
+          orderBy: [
+            { evaluatedAt: "desc" },
+            { createdAt: "desc" },
+            { id: "desc" },
+          ],
+        },
+      },
+    });
+    if (!job) return { success: false as const, message: "Job not found" };
+
+    const history = job.evaluations.map((evaluation) => ({
+      ...evaluation,
+      hardGates: JSON.parse(evaluation.hardGates),
+      dimensionScores: JSON.parse(evaluation.dimensionScores),
+    }));
+    return {
+      success: true as const,
+      current: history[0] ?? null,
+      history,
+    };
+  } catch (error) {
+    return handleError(error, "Failed to fetch job evaluations.");
   }
 };
 
